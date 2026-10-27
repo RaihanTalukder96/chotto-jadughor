@@ -1,5 +1,7 @@
 # Verification record
 
+Update after Neon integration: project `cold-mud-71951638`, branch `production`, is deployed and wired using CLI-pulled env variables. Both migrations, verified client TLS, secure admin bootstrap, the compiled application browser workflow through PDF download, all 21 regression tests, type checks, lint and production builds passed. See [the complete Neon setup record](NEON_SETUP.md) for commands, sanitized output, recovered CLI/test-harness failures, and the precise boundary between completed database setup and pending Render/Vercel hosting.
+
 Verified locally on 27 October 2026 (Asia/Dhaka) using bundled Node 24.22.1 and project-local npm 11.6.2. The machine's default Node 12/npm 6 were not suitable; no global runtime was changed. Docker was unavailable, so PostgreSQL 18.4 was run temporarily from an isolated, ignored project-local installation, initialized as UTF-8 and bound to loopback. The deployable Compose/CI configuration uses PostgreSQL 17. The Docker image and hosted CI workflow are supplied but were not run on this Windows host.
 
 Passed:
@@ -17,7 +19,7 @@ Reproduction commands are in the root README. `scripts/verify-report.ts` generat
 
 External verification still required:
 
-- Real Cloudinary upload, replacement, deletion and retry behavior with account credentials. Local content/size validation was tested; no live Cloudinary success is claimed.
+- Cloudinary provider-failure retry scenarios still need controlled failure testing. Update, 27 October 2026: real authenticated application uploads, browser thumbnail display after reload, replacement, old-asset queueing/deletion, preservation of the referenced replacement, and final test-asset removal all passed with the user's configured credentials. Only generated QA assets and a separate local test database were used. For cleanup, only the test queue timestamps were aged beyond the 10-minute grace period, then the actual cleanup function ran; natural scheduler timing was not tested. Secrets were never printed.
 - Vercel and Render builds/deployments, managed PostgreSQL TLS/network setup, DNS, paid-plan pre-deploy availability, production cookie forwarding through Vercel and platform health checks. Local same-origin Vite cookie proxy was exercised, but this is not a claim of successful hosted deployment.
 - Production backup/restore rehearsal and capacity testing at your actual usage volume.
 

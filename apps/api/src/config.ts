@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../environment.mjs";
 import { z } from "zod";
 const schema = z.object({
   NODE_ENV: z

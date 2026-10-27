@@ -1,7 +1,8 @@
 import { db } from "./db.js";
 import { passwordHash } from "./security.js";
 import { normalize, strongPassword, menus, username } from "./domain.js";
-import { production } from "./config.js";
+import { production, config } from "./config.js";
+import { isLocalDemoDatabase } from "./postgres.js";
 try {
   if (process.argv.includes("--bootstrap")) {
     const name = username.parse(process.env.BOOTSTRAP_USERNAME);
@@ -22,12 +23,25 @@ try {
         },
       });
       await tx.auditLog.create({ data: { action: "admin.bootstrapped" } });
+      await tx.rolePermission.createMany({
+        data: [
+          ...Object.values(menus)
+            .flat()
+            .map((permission) => ({ role: "MANAGER" as const, permission })),
+          { role: "SHOPKEEPER", permission: "dashboard.read" },
+        ],
+        skipDuplicates: true,
+      });
     });
     console.log("Administrator created. Change the password at first sign-in.");
   } else {
-    if (production || process.env.ENABLE_DEMO_SEED !== "true")
+    if (
+      production ||
+      process.env.ENABLE_DEMO_SEED !== "true" ||
+      !isLocalDemoDatabase(config.DATABASE_URL)
+    )
       throw new Error(
-        "Demo seed requires a non-production environment and ENABLE_DEMO_SEED=true",
+        "Demo seed requires a local loopback database, a non-production environment and ENABLE_DEMO_SEED=true",
       );
     for (const [name, role] of [
       ["admin", "ADMIN"],

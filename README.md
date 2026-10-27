@@ -2,6 +2,8 @@
 
 Internal baby-products store workspace. React/Vite frontend, Express API, PostgreSQL/Prisma, server-managed sessions, Cloudinary images and Chromium PDF reports. No checkout, sales recording or payment features. Estimates never change inventory.
 
+The existing workspace is now linked to Neon project `cold-mud-71951638`, branch `production`. See [Neon setup and verification](docs/NEON_SETUP.md). Root `.env.local` contains private CLI-pulled database variables and takes precedence over backend development defaults. To use a separate local database, explicitly supply both `DATABASE_URL` and `DIRECT_URL`, or set `DOTENV_CONFIG_PATH` to a local-only env file. Demo seeding refuses all remote databases.
+
 ## Start locally
 
 Install Node **24.22.1** (see `.nvmrc`) with npm 11 or newer. Older system Node/npm installations do not support this monorepo.
@@ -31,6 +33,7 @@ Configure Cloudinary to upload images; catalog and estimates work without it loc
 
 - `npm run dev`: API on 4000 and Vite on 5173, with same-origin `/api` proxy.
 - `npm run build`: TypeScript API output and optimized web bundle.
+- `npm run preview`: run the compiled API and built frontend at `http://localhost:5173` after building. This is local verification, not hosted deployment.
 - `npm run typecheck`, `npm run lint`, `npm test`: checks and domain tests.
 - `npm run db:generate`: regenerate Prisma Client after schema changes.
 - `npm run db:migrate`: apply committed migrations, without generating new ones.

@@ -37,6 +37,7 @@ import {
 } from "./domain.js";
 import { reportPdf } from "./pdf.js";
 import { imageRouter } from "./images.js";
+import { mountWeb } from "./web.js";
 export const logger = pino({
   redact: [
     "req.headers.cookie",
@@ -70,7 +71,13 @@ app.use((req, res, next) => {
     return next(new HttpError(400, "HTTPS is required"));
   next();
 });
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: { imgSrc: ["'self'", "data:", "https://res.cloudinary.com"] },
+    },
+  }),
+);
 app.use(cors({ origin: config.APP_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "128kb" }));
 app.use(cookieParser());
@@ -640,6 +647,7 @@ app.get("/api/admin/audit", guard("users.manage"), async (_req, res) =>
     }),
   ),
 );
+if (process.env.SERVE_WEB === "true") mountWeb(app);
 app.use((_req, _res, next) => next(new HttpError(404, "Endpoint not found")));
 app.use(
   (

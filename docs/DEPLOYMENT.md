@@ -1,6 +1,8 @@
 # Deployment and operations
 
-No hosting resources are provisioned by this source tree. A Render/Vercel account, PostgreSQL database, Cloudinary account and optional custom domains must be supplied by the operator. Do not enable demo seeds in production.
+For the requested $0 live trial, use [the single-service Render guide](FREE_RENDER.md): the Docker image can now serve both React and the API with `SERVE_WEB=true`, and `render.yaml` selects Free without the paid-only pre-deploy step. Vercel Hobby is restricted to non-commercial personal use, so the split Vercel instructions below require an eligible paid plan for this business app. Render Free is a trial/testing option, not an always-on production guarantee.
+
+Neon PostgreSQL is now linked and verified for project `cold-mud-71951638`, branch `production`; see [Neon setup record](NEON_SETUP.md). Cloudinary live upload/replacement was verified. Render/Vercel hosting is not yet provisioned. Those accounts and optional custom domains must be supplied by the operator. Do not enable demo seeds in production.
 
 ## PostgreSQL
 
