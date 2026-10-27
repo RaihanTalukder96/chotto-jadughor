@@ -26,7 +26,8 @@ import {
   Search,
   Plus,
   ArrowUpRight,
-  Flower2,
+  House,
+  Heart,
   Menu,
   X,
   ChevronLeft,
@@ -34,7 +35,6 @@ import {
   Download,
   ShieldCheck,
   Boxes,
-  Leaf,
 } from "lucide-react";
 import {
   api,
@@ -66,6 +66,11 @@ function ErrorState({ error }: { error: unknown }) {
 function Loading() {
   return (
     <div className="loading" role="status">
+      <img
+        className="loading-logo"
+        src="/brand/logo-chotto.jpeg"
+        alt="Chotto Jadughor"
+      />
       Loading your workspace…
     </div>
   );
@@ -158,8 +163,9 @@ function Login() {
             A thoughtful workspace for the products that make growing up a
             little more magical.
           </p>
-          <div className="big-flower">
-            <Flower2 size={180} strokeWidth={1} />
+          <div className="big-brand-art" aria-hidden="true">
+            <House size={180} strokeWidth={1} />
+            <Heart size={54} className="brand-heart" />
           </div>
         </div>
         <small>Made for Chotto Jadughor · ছোট্ট জাদুঘর</small>
@@ -219,12 +225,16 @@ function Login() {
 function Brand() {
   return (
     <div className="brand">
-      <span className="brandmark">
-        <Flower2 size={27} />
-      </span>
+      <img
+        className="brand-logo"
+        src="/brand/logo-chotto.jpeg"
+        alt="ছোট্ট জাদুঘর — Baby & Kids Shop"
+        width="303"
+        height="280"
+      />
       <div>
         <strong>Chotto Jadughor</strong>
-        <small>ছোট্ট জাদুঘর</small>
+        <small>Baby & Kids Shop · Store workspace</small>
       </div>
     </div>
   );
@@ -262,6 +272,7 @@ function Password({
   return (
     <div className={required ? "password-page" : ""}>
       <form onSubmit={submit}>
+        {required && <Brand />}
         <h2>{required ? "Set your new password" : "Change password"}</h2>
         <p className="muted">
           Use at least 12 characters with uppercase, lowercase, a number and a
@@ -381,7 +392,7 @@ function Shell() {
             ))}
         </nav>
         <div className="sidebar-note">
-          <Leaf size={24} />
+          <Heart size={24} />
           <strong>A little care goes a long way.</strong>
           <p>Everything your store needs, in one happy place.</p>
         </div>
@@ -406,7 +417,10 @@ function Shell() {
       </aside>
       <main className="workspace">
         <div className="topbar">
-          <span>YOUR STORE, THOUGHTFULLY ORGANIZED</span>
+          <span className="topbar-brand">
+            <img className="topbar-logo" src="/brand/logo-chotto.jpeg" alt="" />
+            <span>YOUR STORE, THOUGHTFULLY ORGANIZED</span>
+          </span>
           <span className="top-status">
             <i /> Chotto Jadughor workspace
           </span>
@@ -460,7 +474,11 @@ function Shell() {
           />
         </Routes>
         <footer>
-          Chotto Jadughor <span>Thoughtfully managed. Lovingly chosen.</span>
+          <span className="footer-brand">
+            <img className="footer-logo" src="/brand/logo-chotto.jpeg" alt="" />
+            Chotto Jadughor
+          </span>{" "}
+          <span>Thoughtfully managed. Lovingly chosen.</span>
         </footer>
       </main>
       {password && (
@@ -521,7 +539,7 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
           </span>
           <h1>
             {manage ? "Your product collection" : "Hello, let’s grow together."}
-            <span className="heading-flower">✳</span>
+            <Heart className="heading-heart" size={23} aria-hidden="true" />
           </h1>
           <p className="muted">
             {manage
@@ -560,10 +578,15 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
           </p>
         </div>
         <div className="banner-art">
-          <Flower2 size={97} strokeWidth={1.2} />
+          <img
+            className="banner-logo"
+            src="/brand/logo-chotto.jpeg"
+            alt="Chotto Jadughor · Baby & Kids Shop"
+          />
           <span>
-            care
-            <br />& joy
+            Baby &
+            <br />
+            Kids Shop
           </span>
         </div>
       </div>
@@ -655,8 +678,12 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
                     />
                   ) : (
                     <div className="image-fallback">
-                      <Flower2 size={54} strokeWidth={1} />
-                      <small>Chosen with care</small>
+                      <img
+                        className="product-fallback-logo"
+                        src="/brand/logo-chotto.jpeg"
+                        alt=""
+                      />
+                      <small>Product image coming soon</small>
                     </div>
                   )}
                   <span
@@ -1374,7 +1401,8 @@ function Calculations() {
         <div>
           <span className="eyebrow">PLAN WITH A LITTLE CONFIDENCE</span>
           <h1>
-            Profit Calculation<span className="heading-flower">✳</span>
+            Profit Calculation
+            <Heart className="heading-heart" size={23} aria-hidden="true" />
           </h1>
           <p className="muted">
             Explore possibilities before making your next move.
@@ -1741,7 +1769,8 @@ function Control() {
         <div>
           <span className="eyebrow">THE RIGHT ACCESS, FOR YOUR TEAM</span>
           <h1>
-            Menu Control<span className="heading-flower">✳</span>
+            Menu Control
+            <Heart className="heading-heart" size={23} aria-hidden="true" />
           </h1>
           <p className="muted">
             Manage the people and permissions behind your store.
