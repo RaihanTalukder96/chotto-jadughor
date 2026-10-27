@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: chotto-jadughor-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health/ready
+    preDeployCommand: npm run db:migrate
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

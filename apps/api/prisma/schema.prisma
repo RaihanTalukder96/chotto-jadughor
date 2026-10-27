@@ -1,0 +1,121 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+}
+enum Role {
+ ADMIN
+ MANAGER
+ SHOPKEEPER
+}
+model User {
+ id String @id @default(uuid()) @db.Uuid
+ username String
+ normalizedUsername String @unique
+ passwordHash String
+ role Role
+ active Boolean @default(true)
+ mustChangePassword Boolean @default(true)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ sessions Session[]
+ calculations Calculation[]
+ adjustments StockAdjustment[]
+ audits AuditLog[]
+}
+model Session {
+ id String @id @default(uuid()) @db.Uuid
+ tokenHash String @unique
+ csrf String
+ userId String @db.Uuid
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ expiresAt DateTime @db.Timestamptz(3)
+ @@index([userId])
+ @@index([expiresAt])
+}
+model RolePermission {
+ role Role
+ permission String
+ @@id([role,permission])
+}
+model Category {
+ id String @id @default(uuid()) @db.Uuid
+ name String @unique
+ products Product[]
+}
+model Product {
+ id String @id @default(uuid()) @db.Uuid
+ productId String @unique
+ sku String @unique
+ name String
+ categoryId String @db.Uuid
+ category Category @relation(fields:[categoryId],references:[id])
+ description String @default("")
+ buyingPrice Decimal @db.Decimal(14,2)
+ minPrice Decimal @db.Decimal(14,2)
+ maxPrice Decimal @db.Decimal(14,2)
+ stock Int @default(0)
+ lowStockThreshold Int @default(5)
+ archived Boolean @default(false)
+ version Int @default(1)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ updatedAt DateTime @updatedAt @db.Timestamptz(3)
+ images ProductImage[]
+ adjustments StockAdjustment[]
+ @@index([archived,categoryId,name])
+}
+model ProductImage {
+ id String @id @default(uuid()) @db.Uuid
+ productId String @unique @db.Uuid
+ product Product @relation(fields:[productId],references:[id])
+ publicId String @unique
+ url String
+ thumbnail String
+}
+model AssetCleanup {
+ id String @id @default(uuid()) @db.Uuid
+ publicId String @unique
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+model StockAdjustment {
+ id String @id @default(uuid()) @db.Uuid
+ productId String @db.Uuid
+ product Product @relation(fields:[productId],references:[id])
+ userId String @db.Uuid
+ user User @relation(fields:[userId],references:[id])
+ change Int
+ reason String
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ @@index([productId,createdAt])
+}
+model Calculation {
+ id String @id @default(uuid()) @db.Uuid
+ reportNumber String @unique
+ title String
+ notes String
+ ownerId String @db.Uuid
+ owner User @relation(fields:[ownerId],references:[id])
+ preparedBy String
+ sourceId String?
+ expenses Decimal @db.Decimal(14,2)
+ results Json
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ items CalculationItem[]
+ @@index([ownerId,createdAt])
+}
+model CalculationItem {
+ id String @id @default(uuid()) @db.Uuid
+ calculationId String @db.Uuid
+ calculation Calculation @relation(fields:[calculationId],references:[id])
+ snapshot Json
+ @@index([calculationId])
+}
+model AuditLog {
+ id String @id @default(uuid()) @db.Uuid
+ userId String? @db.Uuid
+ user User? @relation(fields:[userId],references:[id])
+ action String
+ entityId String?
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ @@index([createdAt])
+}
