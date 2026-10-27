@@ -562,35 +562,7 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
           </span>
         )}
       </div>
-      <div className="catalog-banner">
-        <div className="banner-icon">
-          <Boxes size={30} />
-        </div>
-        <div>
-          <span className="eyebrow">LITTLE WONDERS, ALL IN ONE PLACE</span>
-          <h2>
-            {manage
-              ? "Room for every little wonder."
-              : "Big love for little essentials."}
-          </h2>
-          <p>
-            Thoughtfully chosen products for the smallest members of the family.
-          </p>
-        </div>
-        <div className="banner-art">
-          <img
-            className="banner-logo"
-            src="/brand/logo-chotto.jpeg"
-            alt="Chotto Jadughor · Baby & Kids Shop"
-          />
-          <span>
-            Baby &
-            <br />
-            Kids Shop
-          </span>
-        </div>
-      </div>
-      <div className="section-title">
+     <div className="section-title">
         <h2>
           {manage ? "Manage products" : "The collection"}{" "}
           <span className="count">{q.data?.total ?? "—"}</span>
