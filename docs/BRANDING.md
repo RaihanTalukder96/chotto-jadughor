@@ -1,15 +1,9 @@
 # Chotto Jadughor branding
 
-The supplied `logo-chotto.jpeg` is preserved byte-for-byte at `apps/web/public/brand/logo-chotto.jpeg`. It is a user-provided brand asset, not a generated replacement. Vite copies the public asset into the web build and the Express single-origin deployment serves it without authentication. The PDF generator reads this same source asset relative to its module and embeds it as a data URL; no remote request or Cloudinary credential is needed for the logo.
+The supplied high-resolution PNG is preserved byte-for-byte at `apps/web/public/brand/chotto-jadughor-logo.png`. The original artwork is used without cropping or recoloring. Vite serves this asset locally and includes it in deployment builds. The PDF generator embeds the same PNG directly; it needs no remote image request.
 
-The theme follows the logo:
+The theme uses forest green `#1e4818` for headings and primary actions, warm cream `#fff8ee` for the canvas, burnt orange `#ad5000` for accents, and pale sage/cream surfaces. Error and warning colors retain their distinct meaning. Theme variables use semantic primary, accent and success names.
 
-- Navy `#082f5b`: text, headings, main buttons and report rules.
-- Blue `#049ee2`: decorative accents; darker `#0675af` is used for readable blue text and focus outlines.
-- Pink `#d62560`: active navigation accents, hearts and custom-scenario accents.
-- Green `#087b3d`: positive stock, selling prices and success accents.
-- Pale blue, pink and green surfaces retain white cards and clear form borders.
+The new logo appears on the login and password screens, sidebar, header, footer, loading state, product-image fallback, favicon/touch icon and PDF reports. The removed catalog banner stays removed. Existing product photos and business workflows are preserved.
 
-The original logo appears on the sidebar, login and initial-password screen, header, footer, catalog banner, loading state, product-image fallback, favicon/touch icon and server-generated PDF reports. House and heart decorations echo the logo rather than the previous floral identity. Product photos remain unmodified.
-
-Verification: frontend/API builds and lint passed; original-logo loading, four authenticated desktop pages, 390px mobile login/dashboard and navigation were checked in Chromium. A mobile login intrinsic-width issue was corrected and the overflow check passed. Logo-bearing Bangla report pages were generated and inspected with Poppler. Existing business logic and access controls are unchanged by this branding update. QA captures remain under ignored `.local/qa/brand/`.
+Verification: build and lint passed. Desktop and 390px mobile login were checked in Chromium: the 2000px logo loaded and mobile had no horizontal overflow. A sample Bangla PDF using the new PNG was generated and rendered for review. Private QA artifacts remain under ignored `.local/qa/brand/`.

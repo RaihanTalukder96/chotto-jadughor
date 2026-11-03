@@ -1,18 +1,18 @@
 @import "tailwindcss";
 :root {
-  --ink: #082f5b;
-  --text: #294764;
-  --muted: #596e87;
-  --canvas: #f6f9fe;
-  --border: #dce6f2;
-  --blue: #049ee2;
-  --blue-strong: #0675af;
-  --blue-soft: #edf7ff;
-  --pink: #d62560;
-  --pink-soft: #fff0f5;
-  --green: #087b3d;
-  --green-soft: #eaf7ef;
-  --focus: #0675af;
+  --ink: #1e4818;
+  --text: #3b4934;
+  --muted: #6b715f;
+  --canvas: #fff8ee;
+  --border: #e4dfcf;
+  --primary: #426b32;
+  --primary-strong: #315624;
+  --primary-soft: #eff3e7;
+  --accent: #ad5000;
+  --accent-soft: #fff0df;
+  --success: #2d6127;
+  --success-soft: #edf3e5;
+  --focus: #315624;
   font-family: Inter, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--canvas);
@@ -55,7 +55,7 @@ button {
     transform 0.15s;
 }
 button:hover {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
 }
 button:disabled {
   opacity: 0.5;
@@ -89,7 +89,7 @@ textarea {
   resize: vertical;
 }
 input[readonly] {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
 }
 label {
   display: block;
@@ -168,7 +168,7 @@ small {
   gap: 10px;
 }
 .brandmark {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   border-radius: 12px;
   color: var(--text);
   width: 44px;
@@ -228,7 +228,7 @@ small {
   font-weight: 500;
 }
 .sidebar nav a.active {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   color: var(--text);
   font-weight: 700;
 }
@@ -244,8 +244,8 @@ small {
 }
 .sidebar-note {
   margin-top: auto;
-  background: var(--blue-soft);
-  border: 1px solid var(--blue-soft);
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-soft);
   border-radius: 10px;
   padding: 19px 15px;
   color: var(--muted);
@@ -269,7 +269,7 @@ small {
   display: flex;
   align-items: center;
   gap: 8px;
-  border-top: 1px solid var(--blue-soft);
+  border-top: 1px solid var(--primary-soft);
   margin-top: 25px;
   padding: 20px 0;
 }
@@ -318,11 +318,11 @@ small {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--blue-soft);
+  border-bottom: 1px solid var(--primary-soft);
   font-size: 9px;
   letter-spacing: 1.4px;
   color: var(--muted);
-  background: #082f5b80;
+  background: #1e481880;
 }
 .top-status {
   display: flex;
@@ -372,7 +372,7 @@ small {
 }
 .catalog-banner {
   border: 1px solid var(--border);
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   min-height: 151px;
   border-radius: 12px;
   display: flex;
@@ -442,7 +442,7 @@ small {
   font-size: 10px;
   padding: 4px 7px;
   border-radius: 4px;
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   color: var(--muted);
 }
 .text-button {
@@ -509,22 +509,22 @@ small {
 }
 .product-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px #082f5b13;
+  box-shadow: 0 8px 24px #1e481813;
   background: white;
 }
 .product-image {
   height: 210px;
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .product-card:nth-child(3n + 2) .product-image {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
 }
 .product-card:nth-child(3n) .product-image {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
 }
 .product-image img {
   width: 100%;
@@ -548,7 +548,7 @@ small {
   top: 12px;
   left: 12px;
   border-radius: 5px;
-  background: #082f5bed;
+  background: #1e4818ed;
   color: var(--muted);
   font-size: 8px;
   padding: 5px 8px;
@@ -566,7 +566,7 @@ small {
 }
 .stock.out {
   color: #bd2454;
-  background: #fff0f5;
+  background: #fff0df;
 }
 .product-info {
   padding: 19px 17px 15px;
@@ -588,7 +588,7 @@ small {
   margin-bottom: 15px;
 }
 .product-bottom {
-  border-top: 1px solid var(--blue-soft);
+  border-top: 1px solid var(--primary-soft);
   padding-top: 13px;
   display: flex;
   justify-content: space-between;
@@ -654,7 +654,7 @@ small {
 .notice {
   padding: 15px 18px;
   border-radius: 8px;
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   color: var(--muted);
   border: 1px solid var(--border);
   margin: 15px 0;
@@ -664,7 +664,7 @@ small {
   font-size: 12px;
 }
 .notice.error {
-  background: #fff0f5;
+  background: #fff0df;
   border-color: #f3cbd9;
   color: #bd2454;
 }
@@ -736,7 +736,7 @@ small {
   margin: 20px 0;
 }
 .metrics > div {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 18px;
@@ -799,7 +799,7 @@ th {
 }
 td {
   padding: 15px 10px;
-  border-bottom: 1px solid var(--blue-soft);
+  border-bottom: 1px solid var(--primary-soft);
   vertical-align: top;
 }
 td small {
@@ -858,7 +858,7 @@ td select {
   justify-content: space-between;
   width: 100%;
   border: 0;
-  border-bottom: 1px solid var(--blue-soft);
+  border-bottom: 1px solid var(--primary-soft);
   border-radius: 0;
   padding: 20px 0;
   text-align: left;
@@ -895,7 +895,7 @@ td select {
   align-items: center;
   margin-bottom: 0;
   padding: 14px 0;
-  border-top: 1px solid var(--blue-soft);
+  border-top: 1px solid var(--primary-soft);
   font-size: 12px;
 }
 .toggle-row input {
@@ -909,7 +909,7 @@ td select {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   color: var(--muted);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -940,7 +940,7 @@ td select {
   width: 100%;
   height: 240px;
   object-fit: contain;
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   margin-bottom: 24px;
   border-radius: 8px;
 }
@@ -952,7 +952,7 @@ td select {
   display: grid;
   place-items: center;
   min-height: 100vh;
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   padding: 20px;
 }
 .password-page form {
@@ -978,7 +978,7 @@ dialog {
   margin: auto;
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 30px 100px #082f5b30;
+  box-shadow: 0 30px 100px #1e481830;
   padding: 28px;
   width: 760px;
   max-width: calc(100vw - 30px);
@@ -988,7 +988,7 @@ dialog {
   overflow: auto;
 }
 dialog::backdrop {
-  background: #082f5b66;
+  background: #1e481866;
   backdrop-filter: blur(3px);
 }
 dialog header {
@@ -1009,7 +1009,7 @@ dialog:has(.scenario-grid) {
   min-height: 100vh;
 }
 .login-story {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   padding: 44px 60px;
   display: flex;
   flex-direction: column;
@@ -1137,7 +1137,7 @@ dialog:has(.scenario-grid) {
   .sidebar.open {
     transform: translateX(0);
     visibility: visible;
-    box-shadow: 0 0 0 100vmax #082f5b55;
+    box-shadow: 0 0 0 100vmax #1e481855;
   }
   .workspace {
     margin-left: 0;
@@ -1327,8 +1327,8 @@ dialog:has(.scenario-grid) {
   height: auto;
   object-fit: contain;
   border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 12px #082f5b08;
+  background: var(--canvas);
+  box-shadow: 0 2px 12px #1e481808;
 }
 .brand strong {
   font-family: inherit;
@@ -1354,9 +1354,9 @@ dialog:has(.scenario-grid) {
   background: linear-gradient(
     90deg,
     var(--ink) 0 25%,
-    var(--blue) 25% 50%,
-    var(--pink) 50% 75%,
-    var(--green) 75%
+    var(--primary) 25% 50%,
+    var(--accent) 50% 75%,
+    var(--success) 75%
   );
 }
 .store-label {
@@ -1367,20 +1367,20 @@ dialog:has(.scenario-grid) {
   color: var(--muted);
 }
 .sidebar nav a.active {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   color: var(--ink);
-  box-shadow: inset 3px 0 var(--pink);
+  box-shadow: inset 3px 0 var(--accent);
 }
 .active .nav-dot {
-  background: var(--blue);
+  background: var(--primary);
 }
 .sidebar-note {
-  background: var(--pink-soft);
-  border-color: #f3d7e1;
+  background: var(--accent-soft);
+  border-color: #ead5b9;
   padding: 15px;
 }
 .sidebar-note svg {
-  color: var(--pink);
+  color: var(--accent);
 }
 .sidebar-note strong {
   font-family: inherit;
@@ -1393,7 +1393,7 @@ dialog:has(.scenario-grid) {
   color: var(--muted);
 }
 .avatar {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   color: var(--ink);
 }
 .topbar {
@@ -1407,12 +1407,12 @@ dialog:has(.scenario-grid) {
 }
 .topbar-logo {
   width: 35px;
-  height: 33px;
+  height: 35px;
   object-fit: contain;
   border-radius: 5px;
 }
 .top-status i {
-  background: var(--green);
+  background: var(--success);
 }
 h1 {
   color: var(--ink);
@@ -1422,8 +1422,8 @@ h1 {
   display: inline-block;
   vertical-align: middle;
   margin-left: 12px;
-  color: var(--pink);
-  fill: var(--pink-soft);
+  color: var(--accent);
+  fill: var(--accent-soft);
 }
 .primary {
   background: var(--ink);
@@ -1431,8 +1431,8 @@ h1 {
   color: #fff;
 }
 .primary:hover {
-  background: #124b7b;
-  border-color: #124b7b;
+  background: #315c26;
+  border-color: #315c26;
 }
 button:focus-visible,
 a:focus-visible,
@@ -1444,14 +1444,14 @@ textarea:focus-visible {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--blue-strong);
+  border-color: var(--primary-strong);
 }
 .eyebrow,
 .text-button {
-  color: var(--blue-strong);
+  color: var(--primary-strong);
 }
 .catalog-banner {
-  background: linear-gradient(110deg, #eaf6ff 0%, #f6fbff 54%, #fff2f6 100%);
+  background: linear-gradient(110deg, #eef2e3 0%, #fff8ee 54%, #f9ead4 100%);
   border-color: var(--border);
 }
 .catalog-banner::after {
@@ -1461,11 +1461,16 @@ textarea:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, var(--blue), var(--pink), var(--green));
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    var(--accent),
+    var(--success)
+  );
 }
 .banner-icon {
-  color: var(--blue-strong);
-  background: #d9efff;
+  color: var(--primary-strong);
+  background: #e2ebd4;
 }
 .catalog-banner h2 {
   color: var(--ink);
@@ -1488,7 +1493,7 @@ textarea:focus {
   border: 1px solid var(--border);
 }
 .banner-art span {
-  color: var(--green);
+  color: var(--success);
   font-family: inherit;
   font-style: normal;
   font-size: 18px;
@@ -1496,17 +1501,17 @@ textarea:focus {
   line-height: 1.35;
 }
 .count {
-  background: var(--blue-soft);
-  color: var(--blue-strong);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
 }
 .product-image {
-  background: #edf6ff;
+  background: #f5f1e5;
 }
 .product-card:nth-child(3n + 2) .product-image {
-  background: var(--pink-soft);
+  background: var(--accent-soft);
 }
 .product-card:nth-child(3n) .product-image {
-  background: var(--green-soft);
+  background: var(--success-soft);
 }
 .image-fallback {
   gap: 10px;
@@ -1519,68 +1524,68 @@ textarea:focus {
   border-radius: 9px;
 }
 .stock {
-  color: var(--green);
-  border-color: #cbe7d7;
+  color: var(--success);
+  border-color: #cfddc3;
 }
 .stock:before {
-  color: var(--green);
+  color: var(--success);
 }
 .stock.out,
 .stock.out:before {
-  color: var(--pink);
+  color: var(--accent);
 }
 .stock.low,
 .stock.low:before {
   color: #855712;
 }
 .product-bottom strong {
-  color: var(--green);
+  color: var(--success);
 }
 .notice {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
   color: var(--text);
   border-color: var(--border);
 }
 .metrics > div:nth-child(1) {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
 }
 .metrics > div:nth-child(2) {
-  background: var(--pink-soft);
+  background: var(--accent-soft);
 }
 .metrics > div:nth-child(3) {
-  background: var(--green-soft);
+  background: var(--success-soft);
 }
 .scenario:nth-child(1) {
-  border-top: 3px solid var(--blue);
+  border-top: 3px solid var(--primary);
 }
 .scenario:nth-child(2) {
-  border-top: 3px solid var(--green);
+  border-top: 3px solid var(--success);
 }
 .scenario:nth-child(3) {
-  border-top: 3px solid var(--pink);
+  border-top: 3px solid var(--accent);
 }
 .tabs button.active {
   color: var(--ink);
-  border-bottom-color: var(--pink);
+  border-bottom-color: var(--accent);
 }
 .check input,
 .toggle-row input {
-  accent-color: var(--blue-strong);
+  accent-color: var(--primary-strong);
 }
 .pill {
-  background: var(--green-soft);
-  color: var(--green);
-  border-color: #cce7d8;
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: #cfddc3;
 }
 .permission-card > .avatar {
-  background: var(--blue-soft);
+  background: var(--primary-soft);
 }
 .permission-card:nth-child(2) > .avatar {
-  background: var(--pink-soft);
-  color: var(--pink);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .login-story {
-  background: linear-gradient(145deg, #e9f6ff 0%, #f8fbff 55%, #fff0f5 100%);
+  background: linear-gradient(145deg, #e8eddb 0%, #fff8ee 55%, #fff0df 100%);
 }
 .login-story .brand {
   align-items: flex-start;
@@ -1602,7 +1607,7 @@ textarea:focus {
   color: var(--muted);
 }
 .big-brand-art {
-  color: #b4d9f2;
+  color: #c5d3b6;
   right: 16px;
   bottom: 35px;
   transform: rotate(-7deg);
@@ -1611,15 +1616,15 @@ textarea:focus {
   position: absolute;
   right: 60px;
   top: 76px;
-  color: var(--pink);
-  fill: #ffd7e5;
+  color: var(--accent);
+  fill: #efd3b0;
 }
 .login-form .primary {
-  background: linear-gradient(100deg, var(--ink), #096695);
+  background: linear-gradient(100deg, var(--ink), #426831);
   border-color: var(--ink);
 }
 .password-page {
-  background: linear-gradient(135deg, var(--blue-soft), var(--pink-soft));
+  background: linear-gradient(135deg, var(--primary-soft), var(--accent-soft));
 }
 .password-page .brand {
   margin-bottom: 24px;
@@ -1641,7 +1646,7 @@ textarea:focus {
 }
 .footer-logo {
   width: 38px;
-  height: 35px;
+  height: 38px;
   object-fit: contain;
   border-radius: 4px;
 }

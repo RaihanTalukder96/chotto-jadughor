@@ -67,7 +67,7 @@ function Loading() {
     <div className="loading" role="status">
       <img
         className="loading-logo"
-        src="/brand/logo-chotto.jpeg"
+        src="/brand/chotto-jadughor-logo.png"
         alt="Chotto Jadughor"
       />
       Loading your workspace…
@@ -226,10 +226,10 @@ function Brand() {
     <div className="brand">
       <img
         className="brand-logo"
-        src="/brand/logo-chotto.jpeg"
+        src="/brand/chotto-jadughor-logo.png"
         alt="ছোট্ট জাদুঘর — Baby & Kids Shop"
-        width="303"
-        height="280"
+        width="2000"
+        height="2000"
       />
       <div>
         <strong>Chotto Jadughor</strong>
@@ -417,7 +417,11 @@ function Shell() {
       <main className="workspace">
         <div className="topbar">
           <span className="topbar-brand">
-            <img className="topbar-logo" src="/brand/logo-chotto.jpeg" alt="" />
+            <img
+              className="topbar-logo"
+              src="/brand/chotto-jadughor-logo.png"
+              alt=""
+            />
             <span>YOUR STORE, THOUGHTFULLY ORGANIZED</span>
           </span>
           <span className="top-status">
@@ -474,7 +478,11 @@ function Shell() {
         </Routes>
         <footer>
           <span className="footer-brand">
-            <img className="footer-logo" src="/brand/logo-chotto.jpeg" alt="" />
+            <img
+              className="footer-logo"
+              src="/brand/chotto-jadughor-logo.png"
+              alt=""
+            />
             Chotto Jadughor
           </span>{" "}
           <span>Thoughtfully managed. Lovingly chosen.</span>
@@ -680,7 +688,7 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
                     <div className="image-fallback">
                       <img
                         className="product-fallback-logo"
-                        src="/brand/logo-chotto.jpeg"
+                        src="/brand/chotto-jadughor-logo.png"
                         alt=""
                       />
                       <small>Product image coming soon</small>
@@ -1002,7 +1010,7 @@ function ProductForm({
         Main image · JPEG, PNG or WebP · up to 5 MB
         <input
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/png,image/png,image/webp"
           onChange={(e) => setFile(e.target.files?.[0])}
         />
       </label>
