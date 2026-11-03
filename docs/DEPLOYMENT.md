@@ -1,5 +1,7 @@
 # Deployment and operations
 
+The customer storefront now uses `/`, and the staff portal uses `/admin`, on the same domain. Apply the committed customer-shop migration before deploying the new API. See [storefront operations](STOREFRONT.md) for catalog publication, COD orders, shipping/policy settings and verification. Existing products stay private until deliberately published. Keep `SERVE_WEB=true` for the single Render service.
+
 For the requested $0 live trial, use [the single-service Render guide](FREE_RENDER.md): the Docker image can now serve both React and the API with `SERVE_WEB=true`, and `render.yaml` selects Free without the paid-only pre-deploy step. Vercel Hobby is restricted to non-commercial personal use, so the split Vercel instructions below require an eligible paid plan for this business app. Render Free is a trial/testing option, not an always-on production guarantee.
 
 Neon PostgreSQL is now linked and verified for project `cold-mud-71951638`, branch `production`; see [Neon setup record](NEON_SETUP.md). Cloudinary live upload/replacement was verified. Render/Vercel hosting is not yet provisioned. Those accounts and optional custom domains must be supplied by the operator. Do not enable demo seeds in production.

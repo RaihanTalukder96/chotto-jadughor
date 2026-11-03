@@ -38,6 +38,7 @@ import {
 import { reportPdf } from "./pdf.js";
 import { imageRouter } from "./images.js";
 import { mountWeb } from "./web.js";
+import { shop, commerce } from "./shop.js";
 export const logger = pino({
   redact: [
     "req.headers.cookie",
@@ -131,6 +132,8 @@ app.post("/api/auth/login", loginLimit, accountLimit, async (req, res) => {
   await newSession(user.id, res, user.passwordHash);
   res.json({ ok: true });
 });
+app.use("/api/shop", shop);
+app.use("/api/commerce", commerce);
 app.use("/api", authenticate, csrf);
 app.get("/api/auth/me", (req, res) => {
   const a = (req as AuthRequest).auth;
@@ -192,6 +195,13 @@ const safeSelect = {
   name: true,
   category: true,
   subcategory: true,
+  published: true,
+  retailPrice: true,
+  salePrice: true,
+  featured: true,
+  brand: true,
+  ageRange: true,
+  specifications: true,
   description: true,
   minPrice: true,
   maxPrice: true,
@@ -592,7 +602,12 @@ app.put(
     const b = z
       .object({
         role: z.enum(["MANAGER", "SHOPKEEPER"]),
-        menu: z.enum(["Dashboard", "Manage Product", "Profit Calculation"]),
+        menu: z.enum([
+          "Dashboard",
+          "Manage Product",
+          "Profit Calculation",
+          "Customer Orders",
+        ]),
         enabled: z.boolean(),
       })
       .strict()

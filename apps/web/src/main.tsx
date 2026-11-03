@@ -1,13 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
-import { createRoot } from "react-dom/client";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  NavLink,
-  Navigate,
-  useNavigate,
-} from "react-router";
+import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router";
 import {
   QueryClient,
   QueryClientProvider,
@@ -16,7 +8,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Package,
@@ -48,6 +40,7 @@ import {
   type Category,
 } from "./api";
 import "./style.css";
+import { CommerceAdmin } from "./commerce-admin";
 const client = new QueryClient({
   defaultOptions: {
     queries: { retry: false, refetchOnWindowFocus: true, staleTime: 10000 },
@@ -321,25 +314,37 @@ function Password({
 }
 const nav = [
   {
-    to: "/",
+    to: "/admin/shop",
+    label: "Online Shop",
+    permission: "products.manage",
+    icon: House,
+  },
+  {
+    to: "/admin/orders",
+    label: "Customer Orders",
+    permission: "orders.manage",
+    icon: Package,
+  },
+  {
+    to: "/admin",
     label: "Dashboard",
     permission: "dashboard.read",
     icon: LayoutDashboard,
   },
   {
-    to: "/products",
+    to: "/admin/products",
     label: "Manage Product",
     permission: "products.read",
     icon: Package,
   },
   {
-    to: "/calculations",
+    to: "/admin/calculations",
     label: "Profit Calculation",
     permission: "calculations.use",
     icon: Calculator,
   },
   {
-    to: "/control",
+    to: "/admin/control",
     label: "Menu Control",
     permission: "permissions.manage",
     icon: SlidersHorizontal,
@@ -357,7 +362,7 @@ function Shell() {
       client.removeQueries({ predicate: (q) => q.queryKey[0] !== "me" });
       setCsrf("");
       client.setQueryData(["me"], null);
-      navigate("/");
+      navigate("/admin");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -379,7 +384,7 @@ function Shell() {
             .filter((n) => user.permissions.includes(n.permission))
             .map((n) => (
               <NavLink
-                end={n.to === "/"}
+                end={n.to === "/admin"}
                 key={n.to}
                 to={n.to}
                 onClick={() => setMobile(false)}
@@ -430,6 +435,22 @@ function Shell() {
         </div>
         <Routes>
           <Route
+            path="shop"
+            element={
+              <Gate permission="products.manage">
+                <CommerceAdmin mode="settings" />
+              </Gate>
+            }
+          />
+          <Route
+            path="orders"
+            element={
+              <Gate permission="orders.manage">
+                <CommerceAdmin mode="orders" />
+              </Gate>
+            }
+          />
+          <Route
             path="/"
             element={
               user.permissions.includes("dashboard.read") ? (
@@ -444,7 +465,7 @@ function Shell() {
             }
           />
           <Route
-            path="/products"
+            path="products"
             element={
               <Gate permission="products.read">
                 <CatalogPage manage />
@@ -452,7 +473,7 @@ function Shell() {
             }
           />
           <Route
-            path="/calculations"
+            path="calculations"
             element={
               <Gate permission="calculations.use">
                 <Calculations />
@@ -460,7 +481,7 @@ function Shell() {
             }
           />
           <Route
-            path="/control"
+            path="control"
             element={
               <Gate permission="permissions.manage">
                 <Control />
@@ -471,7 +492,8 @@ function Shell() {
             path="*"
             element={
               <div className="notice">
-                Page not found. <NavLink to="/">Return to workspace</NavLink>
+                Page not found.{" "}
+                <NavLink to="/admin">Return to workspace</NavLink>
               </div>
             }
           />
@@ -720,9 +742,25 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
                   <p className="small muted">
                     {p.productId} · {p.sku}
                   </p>
+                  {manage && (
+                    <span className="pill">
+                      {p.published ? "Published in shop" : "Private draft"}
+                    </span>
+                  )}
                   <div className="product-bottom">
                     <strong>
-                      {bdt(p.minPrice)} <small>from</small>
+                      {bdt(
+                        manage && p.retailPrice
+                          ? (p.salePrice ?? p.retailPrice)
+                          : p.minPrice,
+                      )}{" "}
+                      <small>
+                        {manage
+                          ? p.retailPrice
+                            ? "shop price"
+                            : "estimate"
+                          : "from"}
+                      </small>
                     </strong>
                     <span>
                       {p.stock} in stock <ArrowUpRight size={16} />
@@ -825,6 +863,13 @@ const formSchema = z
     name: z.string().trim().min(1),
     categoryId: z.uuid(),
     subcategoryId: z.string(),
+    retailPrice: z.union([amount, z.literal("")]),
+    salePrice: z.union([amount, z.literal("")]),
+    published: z.boolean(),
+    featured: z.boolean(),
+    brand: z.string().max(100),
+    ageRange: z.string().max(100),
+    specifications: z.string().max(5000),
     description: z.string().max(3000),
     buyingPrice: amount,
     minPrice: amount,
@@ -835,7 +880,20 @@ const formSchema = z
   .refine((v) => Number(v.maxPrice) >= Number(v.minPrice), {
     path: ["maxPrice"],
     message: "Maximum must be at least minimum price",
-  });
+  })
+  .refine((v) => !v.published || Number(v.retailPrice) > 0, {
+    path: ["retailPrice"],
+    message: "Set a positive customer price before publishing",
+  })
+  .refine(
+    (v) =>
+      !v.salePrice ||
+      (Number(v.salePrice) > 0 && Number(v.salePrice) < Number(v.retailPrice)),
+    {
+      path: ["salePrice"],
+      message: "Sale price must be positive and lower than customer price",
+    },
+  );
 function ProductForm({
   product,
   onDone,
@@ -861,6 +919,8 @@ function ProductForm({
       ? {
           ...product,
           buyingPrice: product.buyingPrice!,
+          retailPrice: product.retailPrice ?? "",
+          salePrice: product.salePrice ?? "",
           categoryId: product.category.id,
           subcategoryId: product.subcategory?.id ?? "",
         }
@@ -876,6 +936,13 @@ function ProductForm({
           maxPrice: "0",
           stock: 0,
           lowStockThreshold: 5,
+          retailPrice: "",
+          salePrice: "",
+          published: false,
+          featured: false,
+          brand: "",
+          ageRange: "",
+          specifications: "",
         },
   });
   return (
@@ -888,6 +955,8 @@ function ProductForm({
             {
               ...values,
               subcategoryId: values.subcategoryId || null,
+              retailPrice: values.retailPrice || null,
+              salePrice: values.salePrice || null,
               ...(product ? { version: product.version } : {}),
             },
             product ? "PUT" : "POST",
@@ -1006,11 +1075,54 @@ function ProductForm({
         Description
         <textarea {...register("description")} />
       </label>
+      <fieldset className="shop-product-fields">
+        <legend>Customer storefront</legend>
+        <p className="muted">
+          Only published products appear in the customer shop. Customer prices
+          are separate from internal estimate prices.
+        </p>
+        <div className="form-grid">
+          <label>
+            Customer price (৳)
+            <input inputMode="decimal" {...register("retailPrice")} />
+            {errors.retailPrice && (
+              <small className="danger">{errors.retailPrice.message}</small>
+            )}
+          </label>
+          <label>
+            Sale price (৳) · optional
+            <input inputMode="decimal" {...register("salePrice")} />
+            {errors.salePrice && (
+              <small className="danger">{errors.salePrice.message}</small>
+            )}
+          </label>
+          <label>
+            Brand
+            <input {...register("brand")} />
+          </label>
+          <label>
+            Age / size
+            <input {...register("ageRange")} />
+          </label>
+        </div>
+        <label>
+          Specifications / care instructions
+          <textarea {...register("specifications")} />
+        </label>
+        <label className="check">
+          <input type="checkbox" {...register("published")} />
+          Publish in customer shop
+        </label>
+        <label className="check">
+          <input type="checkbox" {...register("featured")} />
+          Feature on homepage
+        </label>
+      </fieldset>
       <label>
         Main image · JPEG, PNG or WebP · up to 5 MB
         <input
           type="file"
-          accept="image/png,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp"
           onChange={(e) => setFile(e.target.files?.[0])}
         />
       </label>
@@ -1083,6 +1195,16 @@ function ProductDetail({
             <button className="primary" onClick={onEdit}>
               Edit product
             </button>
+            {p.published && (
+              <a
+                className="text-button"
+                href={`/product/${p.id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View in customer shop <ArrowUpRight size={15} />
+              </a>
+            )}
             <button onClick={() => setAdjust(!adjust)}>Adjust stock</button>
             <button className="danger" onClick={() => setConfirm(true)}>
               {p.archived ? "Restore" : "Archive"}
@@ -1969,6 +2091,7 @@ function Control() {
                     ["Dashboard", "dashboard.read"],
                     ["Manage Product", "products.manage"],
                     ["Profit Calculation", "calculations.use"],
+                    ["Customer Orders", "orders.manage"],
                   ].map(([menu, permission]) => (
                     <label className="toggle-row" key={menu}>
                       <span>{menu}</span>
@@ -1999,7 +2122,8 @@ function Control() {
             <p className="notice">
               Manage Product grants catalog, pricing, category, stock and image
               actions. Profit Calculation grants cost access, calculations and
-              PDF exports. Menu Control and Users remain admin-only.
+              PDF exports. Customer Orders grants customer delivery details and
+              order processing. Menu Control and Users remain admin-only.
             </p>
           </>
         ) : tab === "users" ? (
@@ -2220,13 +2344,10 @@ function Control() {
     </section>
   );
 }
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+export default function AdminPortal() {
+  return (
     <QueryClientProvider client={client}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-      <Toaster richColors position="bottom-right" />
+      <App />
     </QueryClientProvider>
-  </React.StrictMode>,
-);
+  );
+}

@@ -9,6 +9,9 @@ const cleanup = setInterval(() => {
   db.session
     .deleteMany({ where: { expiresAt: { lt: new Date() } } })
     .catch(() => logger.warn("Session cleanup failed; will retry"));
+  db.customerSession
+    .deleteMany({ where: { expiresAt: { lt: new Date() } } })
+    .catch(() => logger.warn("Customer session cleanup failed; will retry"));
   if (config.CLOUDINARY_API_SECRET)
     cleanupAssets().catch(() =>
       logger.warn("Asset cleanup failed; will retry"),

@@ -21,6 +21,7 @@ export const menus = {
   Dashboard: ["dashboard.read"],
   "Manage Product": ["products.read", "products.manage"],
   "Profit Calculation": ["calculations.use", "reports.export"],
+  "Customer Orders": ["orders.manage"],
 } as const;
 export const allPermissions = [
   ...Object.values(menus).flat(),
@@ -41,12 +42,39 @@ export const productSchema = z
     stock: z.number().int().min(0).max(100000000),
     lowStockThreshold: z.number().int().min(0).max(100000000),
     version: z.number().int().positive().optional(),
+    published: z.boolean().default(false),
+    retailPrice: money.nullable().default(null),
+    salePrice: money.nullable().default(null),
+    featured: z.boolean().default(false),
+    brand: z.string().trim().max(100).default(""),
+    ageRange: z.string().trim().max(100).default(""),
+    specifications: z.string().max(5000).default(""),
   })
   .strict()
   .refine((v) => new Decimal(v.maxPrice).gte(v.minPrice), {
     message: "Maximum price must be at least minimum price",
     path: ["maxPrice"],
-  });
+  })
+  .refine(
+    (v) =>
+      !v.published ||
+      (v.retailPrice !== null && new Decimal(v.retailPrice).gt(0)),
+    {
+      message: "A positive customer price is required to publish",
+      path: ["retailPrice"],
+    },
+  )
+  .refine(
+    (v) =>
+      v.salePrice === null ||
+      (v.retailPrice !== null &&
+        new Decimal(v.salePrice).gt(0) &&
+        new Decimal(v.salePrice).lt(v.retailPrice)),
+    {
+      message: "Sale price must be positive and lower than customer price",
+      path: ["salePrice"],
+    },
+  );
 export const calculationSchema = z
   .object({
     title: z.string().trim().min(1).max(160),

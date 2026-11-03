@@ -1,6 +1,6 @@
 # Chotto Jadughor · ছোট্ট জাদুঘর
 
-Internal baby-products store workspace. React/Vite frontend, Express API, PostgreSQL/Prisma, server-managed sessions, Cloudinary images and Chromium PDF reports. No checkout, sales recording or payment features. Estimates never change inventory.
+Customer shop and internal store workspace, on one domain. React/Vite frontend, Express API, PostgreSQL/Prisma, server-managed sessions, Cloudinary images and Chromium PDF reports. The public shop supports Cash on Delivery orders; internal estimates never change inventory. Customer checkout reserves stock, and admin cancellation restores it. See [customer shop setup](docs/STOREFRONT.md).
 
 The existing workspace is now linked to Neon project `cold-mud-71951638`, branch `production`. See [Neon setup and verification](docs/NEON_SETUP.md). Root `.env.local` contains private CLI-pulled database variables and takes precedence over backend development defaults. To use a separate local database, explicitly supply both `DATABASE_URL` and `DIRECT_URL`, or set `DOTENV_CONFIG_PATH` to a local-only env file. Demo seeding refuses all remote databases.
 
@@ -25,11 +25,13 @@ npm run db:seed
 npm run dev
 ```
 
-Open `http://localhost:5173`. Demo usernames/passwords are `admin`/`admin`, `store manager`/`store manager`, and `shopkeeper`/`shopkeeper`. All require a new strong password at first sign-in. Seed reruns preserve passwords. Demo seeding refuses production. No demo products are inserted; add real products in Manage Product. Categories are seeded for convenience. The seed grants default role permissions only if that role currently has no grants; do not rerun it to preserve an intentionally fully revoked development role.
+Open `http://localhost:5173` for the customer shop and `http://localhost:5173/admin` for the staff portal. Demo usernames/passwords are `admin`/`admin`, `store manager`/`store manager`, and `shopkeeper`/`shopkeeper`. All require a new strong password at first sign-in. Seed reruns preserve passwords. Demo seeding refuses production. No demo products are inserted; add real products in Manage Product. Categories are seeded for convenience. The seed grants default role permissions only if that role currently has no grants; do not rerun it to preserve an intentionally fully revoked development role.
 
 Configure Cloudinary to upload images; catalog and estimates work without it locally. Missing credentials return a clear upload error. Docker is optional if an existing PostgreSQL instance is available: set `DATABASE_URL` and `DIRECT_URL` appropriately.
 
 ## Commands
+
+Customer shop: `http://localhost:5173/`. Staff portal: `http://localhost:5173/admin`. After building and migrating, `npm run shop:prepare` adds the operator-requested starter catalog as private drafts without overwriting existing products. Review the suggested prices, add real stock/photos and publish from Manage Product. Complete Online Shop settings before accepting orders.
 
 Manage Product → Manage categories supports adding, renaming and deleting subcategories under each category. Products may keep no subcategory; changing the category clears the previous subcategory selection. Dashboard, Manage Product and the calculation product picker filter by category and subcategory. Used categories/subcategories cannot be deleted until their products are reassigned. Apply committed database migrations before deploying the updated API.
 

@@ -14,6 +14,13 @@ export type Product = {
   category: { id: string; name: string };
   subcategory: { id: string; name: string } | null;
   description: string;
+  published: boolean;
+  retailPrice: string | null;
+  salePrice: string | null;
+  featured: boolean;
+  brand: string;
+  ageRange: string;
+  specifications: string;
   buyingPrice?: string;
   minPrice: string;
   maxPrice: string;

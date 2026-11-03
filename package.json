@@ -18,6 +18,7 @@
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:seed": "npm run db:seed -w apps/api",
     "bootstrap": "npm run bootstrap -w apps/api",
+    "shop:prepare": "node scripts/prepare-shop-catalog.mjs",
     "test:e2e": "playwright test",
     "preview": "concurrently -k \"npm run start -w apps/api\" \"npm run preview -w apps/web\""
   },

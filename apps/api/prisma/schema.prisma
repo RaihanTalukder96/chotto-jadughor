@@ -73,9 +73,91 @@ model Product {
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt @db.Timestamptz(3)
  images ProductImage[]
+ published Boolean @default(false)
+ retailPrice Decimal? @db.Decimal(14,2)
+ salePrice Decimal? @db.Decimal(14,2)
+ featured Boolean @default(false)
+ brand String @default("")
+ ageRange String @default("")
+ specifications String @default("")
  adjustments StockAdjustment[]
  @@index([archived,categoryId,name])
  @@index([subcategoryId,categoryId])
+}
+model StoreSettings {
+ id String @id @default("main")
+ acceptingOrders Boolean @default(false)
+ phone String @default("")
+ whatsapp String @default("")
+ email String @default("")
+ address String @default("")
+ dhakaDelivery Decimal? @db.Decimal(14,2)
+ outsideDelivery Decimal? @db.Decimal(14,2)
+ deliveryInfo String @default("")
+ returnPolicy String @default("")
+ privacyPolicy String @default("")
+ announcement String @default("Safe for baby. Easy for parents. Honest price.")
+ updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+model Customer {
+ id String @id @default(uuid()) @db.Uuid
+ name String
+ email String @unique
+ passwordHash String
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ sessions CustomerSession[]
+ orders ShopOrder[]
+}
+model CustomerSession {
+ id String @id @default(uuid()) @db.Uuid
+ tokenHash String @unique
+ customerId String @db.Uuid
+ customer Customer @relation(fields:[customerId],references:[id],onDelete:Cascade)
+ expiresAt DateTime @db.Timestamptz(3)
+ @@index([expiresAt])
+}
+enum OrderStatus {
+ PENDING
+ CONFIRMED
+ SHIPPED
+ DELIVERED
+ CANCELLED
+}
+model ShopOrder {
+ id String @id @default(uuid()) @db.Uuid
+ orderNumber String @unique
+ requestKey String @unique @db.Uuid
+ trackingHash String @unique
+ customerId String? @db.Uuid
+ customer Customer? @relation(fields:[customerId],references:[id])
+ name String
+ phone String
+ email String @default("")
+ address String
+ district String
+ zone String
+ notes String @default("")
+ subtotal Decimal @db.Decimal(14,2)
+ delivery Decimal @db.Decimal(14,2)
+ total Decimal @db.Decimal(14,2)
+ status OrderStatus @default(PENDING)
+ version Int @default(1)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ updatedAt DateTime @updatedAt @db.Timestamptz(3)
+ items ShopOrderItem[]
+ @@index([customerId,createdAt])
+ @@index([status,createdAt])
+}
+model ShopOrderItem {
+ id String @id @default(uuid()) @db.Uuid
+ orderId String @db.Uuid
+ order ShopOrder @relation(fields:[orderId],references:[id])
+ productId String @db.Uuid
+ name String
+ sku String
+ quantity Int
+ unitPrice Decimal @db.Decimal(14,2)
+ lineTotal Decimal @db.Decimal(14,2)
 }
 model ProductImage {
  id String @id @default(uuid()) @db.Uuid

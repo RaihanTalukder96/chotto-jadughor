@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 test("login, create product, find dashboard card, save estimate and download protected PDF", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/admin");
   await page
     .getByLabel("Username", { exact: true })
     .fill(process.env.E2E_USERNAME ?? "admin");
