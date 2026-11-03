@@ -42,6 +42,16 @@ model Category {
  id String @id @default(uuid()) @db.Uuid
  name String @unique
  products Product[]
+ subcategories Subcategory[]
+}
+model Subcategory {
+ id String @id @default(uuid()) @db.Uuid
+ name String
+ categoryId String @db.Uuid
+ category Category @relation(fields:[categoryId],references:[id])
+ products Product[]
+ @@unique([categoryId,name])
+ @@unique([id,categoryId])
 }
 model Product {
  id String @id @default(uuid()) @db.Uuid
@@ -50,6 +60,8 @@ model Product {
  name String
  categoryId String @db.Uuid
  category Category @relation(fields:[categoryId],references:[id])
+ subcategoryId String? @db.Uuid
+ subcategory Subcategory? @relation(fields:[subcategoryId,categoryId],references:[id,categoryId],onDelete:Restrict)
  description String @default("")
  buyingPrice Decimal @db.Decimal(14,2)
  minPrice Decimal @db.Decimal(14,2)
@@ -63,6 +75,7 @@ model Product {
  images ProductImage[]
  adjustments StockAdjustment[]
  @@index([archived,categoryId,name])
+ @@index([subcategoryId,categoryId])
 }
 model ProductImage {
  id String @id @default(uuid()) @db.Uuid

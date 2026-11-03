@@ -181,6 +181,7 @@ const paging = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(12),
   search: z.string().max(100).default(""),
   categoryId: z.uuid().optional(),
+  subcategoryId: z.uuid().optional(),
   sort: z.enum(["name", "newest", "price"]).default("name"),
   archived: z.enum(["true", "false"]).default("false"),
 });
@@ -190,6 +191,7 @@ const safeSelect = {
   sku: true,
   name: true,
   category: true,
+  subcategory: true,
   description: true,
   minPrice: true,
   maxPrice: true,
@@ -205,6 +207,7 @@ async function catalog(req: Request, privileged = false) {
   const where: Prisma.ProductWhereInput = {
     archived: privileged ? q.archived === "true" : false,
     ...(q.categoryId ? { categoryId: q.categoryId } : {}),
+    ...(q.subcategoryId ? { subcategoryId: q.subcategoryId } : {}),
     OR: ["name", "productId", "sku"].map((field) => ({
       [field]: { contains: q.search, mode: "insensitive" },
     })),
@@ -237,7 +240,12 @@ app.get("/api/categories", async (req, res) => {
       ["dashboard.read", "products.read", "calculations.use"].includes(p),
     )
   )
-    res.json(await db.category.findMany({ orderBy: { name: "asc" } }));
+    res.json(
+      await db.category.findMany({
+        orderBy: { name: "asc" },
+        include: { subcategories: { orderBy: { name: "asc" } } },
+      }),
+    );
   else fail(403, "Access denied");
 });
 app.post("/api/categories", guard("products.manage"), async (req, res) => {
@@ -278,6 +286,58 @@ app.delete(
       await tx.category.delete({ where: { id } });
       await tx.auditLog.create({
         data: audit(actor(req), "category.deleted", id),
+      });
+    });
+    res.json({ ok: true });
+  },
+);
+const subcategorySchema = z
+  .object({ name: z.string().trim().min(1).max(80) })
+  .strict();
+app.post(
+  "/api/categories/:id/subcategories",
+  guard("products.manage"),
+  async (req, res) => {
+    const categoryId = z.uuid().parse(req.params.id);
+    const body = subcategorySchema.parse(req.body);
+    const result = await db.$transaction(async (tx) => {
+      const sub = await tx.subcategory.create({
+        data: { ...body, categoryId },
+      });
+      await tx.auditLog.create({
+        data: audit(actor(req), "subcategory.created", sub.id),
+      });
+      return sub;
+    });
+    res.status(201).json(result);
+  },
+);
+app.patch(
+  "/api/subcategories/:id",
+  guard("products.manage"),
+  async (req, res) => {
+    const id = z.uuid().parse(req.params.id);
+    const body = subcategorySchema.parse(req.body);
+    res.json(
+      await db.$transaction(async (tx) => {
+        const sub = await tx.subcategory.update({ where: { id }, data: body });
+        await tx.auditLog.create({
+          data: audit(actor(req), "subcategory.updated", id),
+        });
+        return sub;
+      }),
+    );
+  },
+);
+app.delete(
+  "/api/subcategories/:id",
+  guard("products.manage"),
+  async (req, res) => {
+    const id = z.uuid().parse(req.params.id);
+    await db.$transaction(async (tx) => {
+      await tx.subcategory.delete({ where: { id } });
+      await tx.auditLog.create({
+        data: audit(actor(req), "subcategory.deleted", id),
       });
     });
     res.json({ ok: true });

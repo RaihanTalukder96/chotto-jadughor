@@ -31,6 +31,8 @@ Configure Cloudinary to upload images; catalog and estimates work without it loc
 
 ## Commands
 
+Manage Product → Manage categories supports adding, renaming and deleting subcategories under each category. Products may keep no subcategory; changing the category clears the previous subcategory selection. Dashboard, Manage Product and the calculation product picker filter by category and subcategory. Used categories/subcategories cannot be deleted until their products are reassigned. Apply committed database migrations before deploying the updated API.
+
 - `npm run dev`: API on 4000 and Vite on 5173, with same-origin `/api` proxy.
 - `npm run build`: TypeScript API output and optimized web bundle.
 - `npm run preview`: run the compiled API and built frontend at `http://localhost:5173` after building. This is local verification, not hosted deployment.

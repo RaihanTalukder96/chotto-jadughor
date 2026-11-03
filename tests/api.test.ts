@@ -83,6 +83,7 @@ describe.skipIf(!enabled)("PostgreSQL API security and workflows", () => {
     await db.calculation.deleteMany({ where: { ownerId: { in: ids } } });
     await db.stockAdjustment.deleteMany({ where: { userId: { in: ids } } });
     await db.product.deleteMany({ where: { categoryId: category } });
+    await db.subcategory.deleteMany({ where: { categoryId: category } });
     await db.category.deleteMany({ where: { id: category } });
     await db.auditLog.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
@@ -185,6 +186,88 @@ describe.skipIf(!enabled)("PostgreSQL API security and workflows", () => {
         )
       ).status,
     ).toBe(409);
+  });
+  it("manages subcategories and enforces their parent category for products", async () => {
+    const path = `/api/categories/${category}/subcategories`;
+    expect((await send(shop, path, { name: "Forbidden" })).status).toBe(403);
+    const sub = await send(manager, path, { name: "Clothes" });
+    expect(sub.status).toBe(201);
+    expect((await send(manager, path, { name: "Clothes" })).status).toBe(409);
+    expect(
+      (
+        await send(
+          manager,
+          `/api/subcategories/${sub.body.id}`,
+          { name: "Baby clothes" },
+          "patch",
+        )
+      ).status,
+    ).toBe(200);
+    const categories = await shop.get("/api/categories");
+    expect(
+      categories.body.find((c: any) => c.id === category).subcategories[0].name,
+    ).toBe("Baby clothes");
+    const data = {
+      productId: prefix + "-sub",
+      sku: prefix + "-sub",
+      name: "Subcategory product",
+      categoryId: category,
+      subcategoryId: sub.body.id,
+      buyingPrice: "1",
+      minPrice: "2",
+      maxPrice: "3",
+      stock: 0,
+      lowStockThreshold: 1,
+    };
+    const created = await send(manager, "/api/products", data);
+    expect(created.status).toBe(201);
+    expect(
+      (
+        await shop.get(`/api/dashboard?subcategoryId=${sub.body.id}`)
+      ).body.items.map((p: any) => p.id),
+    ).toContain(created.body.id);
+    expect(
+      (
+        await manager.get(
+          `/api/calculation-products?categoryId=${category}&subcategoryId=${sub.body.id}`,
+        )
+      ).body.items[0].subcategory.name,
+    ).toBe("Baby clothes");
+    expect(
+      (await send(manager, `/api/subcategories/${sub.body.id}`, {}, "delete"))
+        .status,
+    ).toBe(409);
+    const otherCategory = await db.category.create({
+      data: { name: prefix + "-other" },
+    });
+    try {
+      expect(
+        (
+          await send(manager, "/api/products", {
+            ...data,
+            productId: prefix + "-wrong",
+            sku: prefix + "-wrong",
+            categoryId: otherCategory.id,
+          })
+        ).status,
+      ).toBe(409);
+    } finally {
+      await db.category.delete({ where: { id: otherCategory.id } });
+    }
+    expect(
+      (
+        await send(
+          manager,
+          `/api/products/${created.body.id}`,
+          { ...data, subcategoryId: null, version: 1 },
+          "put",
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await send(manager, `/api/subcategories/${sub.body.id}`, {}, "delete"))
+        .status,
+    ).toBe(200);
   });
   it("excludes confidential costs from dashboard responses", async () => {
     const result = await shop.get("/api/dashboard?search=" + prefix);

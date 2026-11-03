@@ -34,7 +34,6 @@ import {
   ChevronRight,
   Download,
   ShieldCheck,
-  Boxes,
 } from "lucide-react";
 import {
   api,
@@ -505,6 +504,7 @@ function Gate({
 function CatalogPage({ manage = false }: { manage?: boolean }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [sort, setSort] = useState("name");
   const [page, setPage] = useState(1);
   const [archived, setArchived] = useState(false);
@@ -520,10 +520,19 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
     return () => clearTimeout(t);
   }, [search]);
   const q = useQuery({
-    queryKey: ["catalog", manage, debounced, category, sort, page, archived],
+    queryKey: [
+      "catalog",
+      manage,
+      debounced,
+      category,
+      subcategory,
+      sort,
+      page,
+      archived,
+    ],
     queryFn: () =>
       api<Catalog>(
-        `${manage ? "/products" : "/dashboard"}?${new URLSearchParams({ search: debounced, categoryId: category, sort, page: String(page), archived: String(archived) }).toString().replace("categoryId=&", "")}`,
+        `${manage ? "/products" : "/dashboard"}?${new URLSearchParams({ search: debounced, ...(category ? { categoryId: category } : {}), ...(subcategory ? { subcategoryId: subcategory } : {}), sort, page: String(page), archived: String(archived) }).toString().replace("categoryId=&", "")}`,
       ),
   });
   const cats = useQuery({
@@ -562,7 +571,7 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
           </span>
         )}
       </div>
-     <div className="section-title">
+      <div className="section-title">
         <h2>
           {manage ? "Manage products" : "The collection"}{" "}
           <span className="count">{q.data?.total ?? "—"}</span>
@@ -592,6 +601,7 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
           value={category}
           onChange={(e) => {
             setCategory(e.target.value);
+            setSubcategory("");
             setPage(1);
           }}
         >
@@ -601,6 +611,24 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
               {c.name}
             </option>
           ))}
+        </select>
+        <select
+          aria-label="Filter subcategory"
+          disabled={!category}
+          value={subcategory}
+          onChange={(e) => {
+            setSubcategory(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All subcategories</option>
+          {cats.data
+            ?.find((c) => c.id === category)
+            ?.subcategories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
         </select>
         <select
           aria-label="Sort products"
@@ -676,7 +704,10 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
                   </span>
                 </div>
                 <div className="product-info">
-                  <span className="eyebrow">{p.category.name}</span>
+                  <span className="eyebrow">
+                    {p.category.name}
+                    {p.subcategory ? ` / ${p.subcategory.name}` : ""}
+                  </span>
                   <h3>{p.name}</h3>
                   <p className="small muted">
                     {p.productId} · {p.sku}
@@ -785,6 +816,7 @@ const formSchema = z
     sku: z.string().trim().min(1),
     name: z.string().trim().min(1),
     categoryId: z.uuid(),
+    subcategoryId: z.string(),
     description: z.string().max(3000),
     buyingPrice: amount,
     minPrice: amount,
@@ -811,6 +843,7 @@ function ProductForm({
   const [error, setError] = useState<unknown>();
   const {
     register,
+    setValue,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
@@ -821,12 +854,14 @@ function ProductForm({
           ...product,
           buyingPrice: product.buyingPrice!,
           categoryId: product.category.id,
+          subcategoryId: product.subcategory?.id ?? "",
         }
       : {
           productId: "",
           sku: "",
           name: "",
           categoryId: "",
+          subcategoryId: "",
           description: "",
           buyingPrice: "0",
           minPrice: "0",
@@ -842,7 +877,11 @@ function ProductForm({
           setError(undefined);
           const p = await post(
             product ? `/products/${product.id}` : "/products",
-            { ...values, ...(product ? { version: product.version } : {}) },
+            {
+              ...values,
+              subcategoryId: values.subcategoryId || null,
+              ...(product ? { version: product.version } : {}),
+            },
             product ? "PUT" : "POST",
           );
           if (file) {
@@ -888,7 +927,11 @@ function ProductForm({
         ))}
         <label>
           Category
-          <select {...register("categoryId")}>
+          <select
+            {...register("categoryId", {
+              onChange: () => setValue("subcategoryId", ""),
+            })}
+          >
             <option value="">Choose category</option>
             {cats.data?.map((c) => (
               <option key={c.id} value={c.id}>
@@ -899,6 +942,22 @@ function ProductForm({
           {errors.categoryId && (
             <small className="danger">Choose a category</small>
           )}
+        </label>
+        <label>
+          Subcategory
+          <select
+            {...register("subcategoryId")}
+            disabled={!watch("categoryId")}
+          >
+            <option value="">No subcategory</option>
+            {cats.data
+              ?.find((c) => c.id === watch("categoryId"))
+              ?.subcategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+          </select>
         </label>
         {[
           ["buyingPrice", "Buying price (৳)"],
@@ -983,7 +1042,10 @@ function ProductDetail({
       {p.images[0] && (
         <img className="detail-image" src={p.images[0].url} alt={p.name} />
       )}
-      <span className="eyebrow">{p.category.name}</span>
+      <span className="eyebrow">
+        {p.category.name}
+        {p.subcategory ? ` / ${p.subcategory.name}` : ""}
+      </span>
       <h2>{p.name}</h2>
       <p className="muted">
         {p.productId} · {p.sku}
@@ -1121,7 +1183,10 @@ function Categories() {
   const run = async (action: () => Promise<unknown>) => {
     try {
       await action();
+      setError(undefined);
       await client.invalidateQueries({ queryKey: ["categories"] });
+      await client.invalidateQueries({ queryKey: ["catalog"] });
+      await client.invalidateQueries({ queryKey: ["calculation-products"] });
       toast.success("Category updated");
       setConfirm(undefined);
     } catch (e) {
@@ -1182,6 +1247,67 @@ function Categories() {
             </button>
           )}
         </form>
+      ))}
+      {q.data?.map((c) => (
+        <section className="panel" key={c.id}>
+          <h3>{c.name} — Subcategories</h3>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = new FormData(e.currentTarget).get("name");
+              void run(() =>
+                post(`/categories/${c.id}/subcategories`, { name }),
+              );
+            }}
+          >
+            <label>
+              New subcategory
+              <input name="name" required maxLength={80} />
+            </label>
+            <button className="primary">Add subcategory</button>
+          </form>
+          {c.subcategories.map((sub) => (
+            <form
+              className="category-row"
+              key={sub.id}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const name = new FormData(e.currentTarget).get("name");
+                void run(() =>
+                  post(`/subcategories/${sub.id}`, { name }, "PATCH"),
+                );
+              }}
+            >
+              <input
+                aria-label={`Subcategory ${sub.name}`}
+                name="name"
+                defaultValue={sub.name}
+                required
+                maxLength={80}
+              />
+              <button>Rename</button>
+              <button
+                type="button"
+                className="danger"
+                onClick={() => setConfirm(sub.id)}
+              >
+                Delete
+              </button>
+              {confirm === sub.id && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    run(() =>
+                      api(`/subcategories/${sub.id}`, { method: "DELETE" }),
+                    )
+                  }
+                >
+                  Confirm delete
+                </button>
+              )}
+            </form>
+          ))}
+        </section>
       ))}
       {!!error && <ErrorState error={error} />}
     </>
@@ -1298,6 +1424,12 @@ function Results({ result }: { result: any }) {
   );
 }
 function Calculations() {
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const cats = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => api<Category[]>("/categories"),
+  });
   const [tab, setTab] = useState("workspace");
   const [search, setSearch] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([]);
@@ -1312,10 +1444,16 @@ function Calculations() {
   const [historyPage, setHistoryPage] = useState(1);
   const [ack, setAck] = useState(false);
   const products = useQuery({
-    queryKey: ["calculation-products", search],
+    queryKey: ["calculation-products", search, category, subcategory],
     queryFn: () =>
       api<Catalog>(
-        "/calculation-products?limit=20&search=" + encodeURIComponent(search),
+        "/calculation-products?" +
+          new URLSearchParams({
+            limit: "20",
+            search,
+            ...(category ? { categoryId: category } : {}),
+            ...(subcategory ? { subcategoryId: subcategory } : {}),
+          }),
       ),
     enabled: tab === "workspace",
   });
@@ -1498,6 +1636,44 @@ function Calculations() {
               </p>
             )}
             <h3>Choose products</h3>
+            <div className="form-grid">
+              <label>
+                Category
+                <select
+                  aria-label="Select category"
+                  value={category}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    setSubcategory("");
+                  }}
+                >
+                  <option value="">All categories</option>
+                  {cats.data?.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Subcategory
+                <select
+                  aria-label="Select subcategory"
+                  disabled={!category}
+                  value={subcategory}
+                  onChange={(e) => setSubcategory(e.target.value)}
+                >
+                  <option value="">All subcategories</option>
+                  {cats.data
+                    ?.find((c) => c.id === category)
+                    ?.subcategories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
             <div className="search">
               <Search size={18} />
               <input

@@ -12,6 +12,7 @@ export type Product = {
   sku: string;
   name: string;
   category: { id: string; name: string };
+  subcategory: { id: string; name: string } | null;
   description: string;
   buyingPrice?: string;
   minPrice: string;
@@ -28,7 +29,11 @@ export type Catalog = {
   page: number;
   pages: number;
 };
-export type Category = { id: string; name: string };
+export type Category = {
+  id: string;
+  name: string;
+  subcategories: { id: string; name: string }[];
+};
 let csrf = "";
 export const setCsrf = (value: string) => {
   csrf = value;

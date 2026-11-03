@@ -33,6 +33,7 @@ export const productSchema = z
     sku: z.string().trim().min(1).max(60),
     name: z.string().trim().min(1).max(200),
     categoryId: z.uuid(),
+    subcategoryId: z.uuid().nullable().default(null),
     description: z.string().max(3000).default(""),
     buyingPrice: money,
     minPrice: money,
