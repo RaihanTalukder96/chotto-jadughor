@@ -768,6 +768,9 @@
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 40px;
 }
+.storefront button.sf-filter-toggle {
+  display: none;
+}
 .sf-filters {
   border-right: 1px solid var(--sf-line);
   padding-right: 25px;
@@ -1671,9 +1674,24 @@
     border: 1px solid var(--sf-line);
     border-radius: 5px;
     padding: 16px;
-    display: grid;
+    display: none;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+  }
+  .storefront button.sf-filter-toggle {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    margin-bottom: 16px;
+    background: #f2f4e9;
+    border-color: var(--sf-line);
+    font-size: 12px;
+  }
+  .sf-filter-toggle svg:last-child {
+    margin-left: auto;
+  }
+  .sf-filters.is-open {
+    display: grid;
   }
   .sf-filters h3 {
     grid-column: 1/-1;

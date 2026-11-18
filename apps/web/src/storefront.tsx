@@ -31,6 +31,7 @@ import {
   Search,
   ShieldCheck,
   ShoppingBag,
+  SlidersHorizontal,
   Sparkles,
   Truck,
   UserRound,
@@ -661,6 +662,7 @@ function Home() {
 }
 function Catalog() {
   const [params, setParams] = useSearchParams();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { categories } = useStore();
   const query = params.toString();
   const q = useQuery({
@@ -694,8 +696,22 @@ function Catalog() {
         </div>
         <p>{q.data?.total ?? 0} thoughtful finds</p>
       </div>
+      <button
+        type="button"
+        className="sf-filter-toggle"
+        aria-expanded={filtersOpen}
+        aria-controls="shop-filters"
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        <SlidersHorizontal size={17} />
+        {filtersOpen ? "Hide filters" : "Filters"}
+        {filtersOpen ? <Minus size={16} /> : <Plus size={16} />}
+      </button>
       <div className="sf-catalog-layout">
-        <aside className="sf-filters">
+        <aside
+          id="shop-filters"
+          className={`sf-filters${filtersOpen ? " is-open" : ""}`}
+        >
           <h3>Find your favourites</h3>
           <label>
             Search
