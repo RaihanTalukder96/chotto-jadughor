@@ -1296,6 +1296,10 @@ function ProductForm({
               value="IMPORTED"
               required
               {...register("originType")}
+              checked={watch("originType") === "IMPORTED"}
+              onChange={() =>
+                setValue("originType", "IMPORTED", { shouldDirty: true })
+              }
             />
             Imported from
           </label>
@@ -1304,12 +1308,12 @@ function ProductForm({
               type="radio"
               value="BANGLADESH"
               required
-              {...register("originType", {
-                onChange: (e) => {
-                  if (e.target.value === "BANGLADESH")
-                    setValue("importCountry", "");
-                },
-              })}
+              {...register("originType")}
+              checked={watch("originType") === "BANGLADESH"}
+              onChange={() => {
+                setValue("originType", "BANGLADESH", { shouldDirty: true });
+                setValue("importCountry", "", { shouldDirty: true });
+              }}
             />
             Made in Bangladesh
           </label>
@@ -1324,6 +1328,8 @@ function ProductForm({
             Import country
             <select
               {...register("importCountry")}
+              aria-label="Import country"
+              value={watch("importCountry")}
               required
               disabled={countries.isLoading || !!countries.error}
             >
