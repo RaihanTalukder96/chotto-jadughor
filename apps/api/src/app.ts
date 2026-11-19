@@ -39,6 +39,7 @@ import { reportPdf } from "./pdf.js";
 import { imageRouter } from "./images.js";
 import { mountWeb } from "./web.js";
 import { shop, commerce } from "./shop.js";
+import { bulkDeleteSchema, deleteProducts } from "./product-deletion.js";
 export const logger = pino({
   redact: [
     "req.headers.cookie",
@@ -216,6 +217,7 @@ const safeSelect = {
 async function catalog(req: Request, privileged = false) {
   const q = paging.parse(req.query);
   const where: Prisma.ProductWhereInput = {
+    deletedAt: null,
     archived: privileged ? q.archived === "true" : false,
     ...(q.categoryId ? { categoryId: q.categoryId } : {}),
     ...(q.subcategoryId ? { subcategoryId: q.subcategoryId } : {}),
@@ -362,6 +364,22 @@ app.get(
   guard("calculations.use"),
   async (req, res) => res.json(await catalog(req, true)),
 );
+app.post(
+  "/api/products/bulk-delete",
+  guard("products.manage"),
+  async (req, res) => {
+    const b = bulkDeleteSchema.parse(req.body);
+    res.json(await deleteProducts(b.products, actor(req)));
+  },
+);
+app.delete("/api/products/:id", guard("products.manage"), async (req, res) => {
+  const id = z.uuid().parse(req.params.id);
+  const b = z
+    .object({ version: z.number().int().positive() })
+    .strict()
+    .parse(req.body);
+  res.json(await deleteProducts([{ id, version: b.version }], actor(req)));
+});
 app.post("/api/products", guard("products.manage"), async (req, res) => {
   const { version: _version, ...b } = productSchema.parse(req.body);
   const product = await db.$transaction(async (tx) => {
@@ -387,12 +405,12 @@ app.put("/api/products/:id", guard("products.manage"), async (req, res) => {
   const { version, stock, ...b } = productSchema.parse(req.body);
   if (!version) fail(400, "Version is required");
   const p = await db.$transaction(async (tx) => {
-    const old = await tx.product.findUnique({ where: { id } });
+    const old = await tx.product.findUnique({ where: { id, deletedAt: null } });
     if (!old) fail(404, "Product not found");
     if (old.stock !== stock)
       fail(400, "Use stock adjustment to change inventory");
     const updated = await tx.product.updateMany({
-      where: { id, version },
+      where: { id, version, deletedAt: null },
       data: { ...b, version: { increment: 1 } },
     });
     if (updated.count !== 1)
@@ -415,7 +433,7 @@ app.patch(
       .parse(req.body);
     await db.$transaction(async (tx) => {
       const result = await tx.product.updateMany({
-        where: { id, version: b.version },
+        where: { id, version: b.version, deletedAt: null },
         data: { archived: b.archived, version: { increment: 1 } },
       });
       if (!result.count) fail(409, "Product changed. Reload first");
@@ -430,10 +448,13 @@ app.patch(
     res.json({ ok: true });
   },
 );
-app.get("/api/products/:id/stock", guard("products.read"), async (req, res) =>
+app.get("/api/products/:id/stock", guard("products.read"), async (req, res) => {
+  const id = z.uuid().parse(req.params.id);
+  if (!(await db.product.findUnique({ where: { id, deletedAt: null } })))
+    fail(404, "Product not found");
   res.json(
     await db.stockAdjustment.findMany({
-      where: { productId: z.uuid().parse(req.params.id) },
+      where: { productId: id },
       select: {
         id: true,
         change: true,
@@ -444,8 +465,8 @@ app.get("/api/products/:id/stock", guard("products.read"), async (req, res) =>
       take: 100,
       orderBy: { createdAt: "desc" },
     }),
-  ),
-);
+  );
+});
 app.post(
   "/api/products/:id/stock",
   guard("products.manage"),
@@ -469,6 +490,7 @@ app.post(
         where: {
           id,
           version: b.version,
+          deletedAt: null,
           stock: {
             gte: Math.max(0, -b.change),
             lte: 100000000 - Math.max(0, b.change),
@@ -497,7 +519,11 @@ app.use("/api/products", imageRouter);
 async function compute(body: unknown) {
   const b = calculationSchema.parse(body);
   const products = await db.product.findMany({
-    where: { id: { in: b.items.map((i) => i.productId) }, archived: false },
+    where: {
+      id: { in: b.items.map((i) => i.productId) },
+      archived: false,
+      deletedAt: null,
+    },
   });
   if (products.length !== b.items.length)
     fail(400, "One or more products are unavailable");
@@ -769,7 +795,8 @@ app.use(
       error.code !== "LIMIT_FILE_SIZE"
     ) {
       status = 400;
-      message = "Upload up to 4 gallery images (or one replacement) and the product version";
+      message =
+        "Upload up to 4 gallery images (or one replacement) and the product version";
     }
     if (status === 500)
       logger.error(

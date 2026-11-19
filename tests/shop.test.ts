@@ -593,6 +593,208 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         });
       }
     });
+    it("deletes single and selected products atomically while preserving order and report history", async () => {
+      const a = await db.product.create({
+        data: {
+          productId: prefix + "-delete-a",
+          sku: prefix + "-delete-a",
+          name: "Delete test A",
+          categoryId: category.id,
+          buyingPrice: "50",
+          minPrice: "100",
+          maxPrice: "100",
+          retailPrice: "100",
+          stock: 5,
+          published: true,
+        },
+      });
+      const b = await db.product.create({
+        data: {
+          productId: prefix + "-delete-b",
+          sku: prefix + "-delete-b",
+          name: "Delete test B",
+          categoryId: category.id,
+          buyingPrice: "50",
+          minPrice: "100",
+          maxPrice: "100",
+          retailPrice: "100",
+          stock: 0,
+        },
+      });
+      const publicId = prefix + "-delete-photo";
+      let orderId: string | undefined, calculationId: string | undefined;
+      try {
+        await db.productImage.create({
+          data: {
+            productId: a.id,
+            publicId,
+            url: "https://res.cloudinary.com/test/delete.webp",
+            thumbnail: "https://res.cloudinary.com/test/delete.webp",
+          },
+        });
+        const items = [{ productId: a.id, quantity: 1 }];
+        const order = await send(guest, "/api/shop/orders", {
+          ...checkout(),
+          cart: { zone: "DHAKA", items },
+          expectedTotal: "160",
+        });
+        expect(order.status).toBe(201);
+        orderId = order.body.id;
+        const report = await send(admin, "/api/calculations", {
+          title: "Deletion history",
+          notes: "",
+          expenses: "0",
+          items,
+        });
+        expect(report.status).toBe(201);
+        calculationId = report.body.id;
+        const current = await db.product.findUnique({ where: { id: a.id } });
+        expect(
+          (
+            await send(
+              guest,
+              `/api/products/${a.id}`,
+              { version: current.version },
+              "delete",
+            )
+          ).status,
+        ).toBe(401);
+        expect(
+          (
+            await admin
+              .delete(`/api/products/${a.id}`)
+              .set("Origin", origin)
+              .send({ version: current.version })
+          ).status,
+        ).toBe(403);
+        const selection = [
+          { id: a.id, version: current.version },
+          { id: b.id, version: b.version },
+        ];
+        expect(
+          (
+            await send(admin, "/api/products/bulk-delete", {
+              products: [selection[0], { id: b.id, version: b.version + 1 }],
+            })
+          ).status,
+        ).toBe(409);
+        expect(
+          (await db.product.findUnique({ where: { id: a.id } })).deletedAt,
+        ).toBeNull();
+        expect(
+          await db.productImage.count({ where: { productId: a.id } }),
+        ).toBe(1);
+        expect(
+          (
+            await send(admin, "/api/products/bulk-delete", {
+              products: [selection[0], selection[0]],
+            })
+          ).status,
+        ).toBe(400);
+        const removed = await send(admin, "/api/products/bulk-delete", {
+          products: selection,
+        });
+        expect(removed.status).toBe(200);
+        expect(removed.body.deleted).toBe(2);
+        expect(
+          await db.product.count({
+            where: { id: { in: [a.id, b.id] }, deletedAt: { not: null } },
+          }),
+        ).toBe(2);
+        expect(
+          await db.productImage.count({ where: { productId: a.id } }),
+        ).toBe(0);
+        expect(
+          await db.assetCleanup.findUnique({ where: { publicId } }),
+        ).not.toBeNull();
+        expect((await guest.get(`/api/shop/products/${a.id}`)).status).toBe(
+          404,
+        );
+        expect(
+          (await admin.get(`/api/products?search=${prefix}-delete`)).body.total,
+        ).toBe(0);
+        expect(
+          (
+            await admin.get(
+              `/api/products?archived=true&search=${prefix}-delete`,
+            )
+          ).body.total,
+        ).toBe(0);
+        expect(
+          (await guest.get(`/api/shop/products?search=${a.name}`)).body.total,
+        ).toBe(0);
+        expect(
+          (
+            await send(
+              admin,
+              `/api/products/${a.id}/archive`,
+              { version: current.version + 1, archived: false },
+              "patch",
+            )
+          ).status,
+        ).toBe(409);
+        const saved = await admin.get(`/api/calculations/${calculationId}`);
+        expect(saved.status).toBe(200);
+        expect(saved.body.items[0].snapshot.name).toBe(a.name);
+        expect(
+          (
+            await send(
+              admin,
+              `/api/commerce/orders/${orderId}`,
+              { version: 1, status: "CANCELLED" },
+              "patch",
+            )
+          ).status,
+        ).toBe(200);
+        const cancelledProduct = await db.product.findUnique({
+          where: { id: a.id },
+        });
+        expect(cancelledProduct.stock).toBe(5);
+        expect(cancelledProduct.deletedAt).not.toBeNull();
+        expect(
+          (
+            await send(
+              admin,
+              `/api/products/${a.id}`,
+              { version: cancelledProduct.version },
+              "delete",
+            )
+          ).status,
+        ).toBe(409);
+        const c = await db.product.create({
+          data: {
+            productId: prefix + "-delete-c",
+            sku: prefix + "-delete-c",
+            name: "Delete test C",
+            categoryId: category.id,
+            buyingPrice: "1",
+            minPrice: "2",
+            maxPrice: "2",
+          },
+        });
+        expect(
+          (
+            await send(
+              admin,
+              `/api/products/${c.id}`,
+              { version: c.version },
+              "delete",
+            )
+          ).body.deleted,
+        ).toBe(1);
+      } finally {
+        await db.assetCleanup.deleteMany({ where: { publicId } });
+        if (orderId) {
+          await db.shopOrderItem.deleteMany({ where: { orderId } });
+          await db.shopOrder.deleteMany({ where: { id: orderId } });
+          await db.auditLog.deleteMany({ where: { entityId: orderId } });
+        }
+        if (calculationId) {
+          await db.calculationItem.deleteMany({ where: { calculationId } });
+          await db.calculation.deleteMany({ where: { id: calculationId } });
+        }
+      }
+    });
     it("lets the administrator grant and revoke the Customer Orders menu", async () => {
       const previous = await db.rolePermission.findUnique({
         where: {

@@ -542,8 +542,15 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
   const [archived, setArchived] = useState(false);
   const [editor, setEditor] = useState<Product | null | undefined>();
   const [detail, setDetail] = useState<Product>();
+  const [selected, setSelected] = useState<Product[]>([]);
+  const [deleteTargets, setDeleteTargets] = useState<Product[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<unknown>();
   const [categories, setCategories] = useState(false);
   const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    setSelected([]);
+  }, [manage, debounced, category, subcategory, sort, page, archived]);
   useEffect(() => {
     const t = setTimeout(() => {
       setDebounced(search);
@@ -571,6 +578,46 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
     queryKey: ["categories"],
     queryFn: () => api<Category[]>("/categories"),
   });
+  async function confirmDelete() {
+    if (deleting || !deleteTargets.length) return;
+    setDeleting(true);
+    setDeleteError(undefined);
+    try {
+      if (deleteTargets.length === 1)
+        await post(
+          `/products/${deleteTargets[0]!.id}`,
+          { version: deleteTargets[0]!.version },
+          "DELETE",
+        );
+      else
+        await post("/products/bulk-delete", {
+          products: deleteTargets.map((p) => ({
+            id: p.id,
+            version: p.version,
+          })),
+        });
+      toast.success(
+        `${deleteTargets.length} product${deleteTargets.length === 1 ? "" : "s"} deleted`,
+      );
+      setDeleteTargets([]);
+      setSelected([]);
+      setDetail(undefined);
+      if (q.data && q.data.items.length <= deleteTargets.length && page > 1)
+        setPage(page - 1);
+      await client.invalidateQueries({ queryKey: ["catalog"] });
+      await client.invalidateQueries({ queryKey: ["calculation-products"] });
+    } catch (e) {
+      setDeleteError(e);
+      setSelected([]);
+      await client.invalidateQueries({ queryKey: ["catalog"] });
+    } finally {
+      setDeleting(false);
+    }
+  }
+  function requestDelete(products: Product[]) {
+    setDeleteError(undefined);
+    setDeleteTargets(products);
+  }
   return (
     <section className="page">
       <div className="page-heading">
@@ -685,6 +732,38 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
           </label>
         )}
       </div>
+      {manage && !!q.data?.items.length && (
+        <div className="bulk-product-actions">
+          <label className="check">
+            <input
+              type="checkbox"
+              aria-label="Select all products on this page"
+              checked={q.data.items.every((p) =>
+                selected.some((s) => s.id === p.id),
+              )}
+              onChange={(e) =>
+                setSelected(e.target.checked ? q.data!.items : [])
+              }
+            />
+            Select all on this page
+          </label>
+          <span aria-live="polite">{selected.length} selected</span>
+          {selected.length > 0 && (
+            <>
+              <button type="button" onClick={() => setSelected([])}>
+                Clear selection
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={() => requestDelete(selected)}
+              >
+                Delete selected ({selected.length})
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {q.isLoading ? (
         <Loading />
       ) : q.error ? (
@@ -692,85 +771,117 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
       ) : q.data?.items.length ? (
         <>
           <div className="product-grid">
-            {q.data.items.map((p) => (
-              <button
-                className="product-card"
-                key={p.id}
-                onClick={() => setDetail(p)}
-              >
-                <div className="product-image">
-                  {p.images[0] ? (
-                    <img
-                      src={p.images[0].thumbnail}
-                      alt={p.name}
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <div className="image-fallback">
+            {q.data.items.map((p) => {
+              const card = (
+                <button
+                  className="product-card"
+                  key={p.id}
+                  onClick={() => setDetail(p)}
+                >
+                  <div className="product-image">
+                    {p.images[0] ? (
                       <img
-                        className="product-fallback-logo"
-                        src="/brand/chotto-jadughor-logo.png"
-                        alt=""
+                        src={p.images[0].thumbnail}
+                        alt={p.name}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
                       />
-                      <small>Product image coming soon</small>
-                    </div>
-                  )}
-                  <span
-                    className={
-                      "stock " +
-                      (p.stock === 0
-                        ? "out"
+                    ) : (
+                      <div className="image-fallback">
+                        <img
+                          className="product-fallback-logo"
+                          src="/brand/chotto-jadughor-logo.png"
+                          alt=""
+                        />
+                        <small>Product image coming soon</small>
+                      </div>
+                    )}
+                    <span
+                      className={
+                        "stock " +
+                        (p.stock === 0
+                          ? "out"
+                          : p.stock <= p.lowStockThreshold
+                            ? "low"
+                            : "")
+                      }
+                    >
+                      {p.stock === 0
+                        ? "Out of stock"
                         : p.stock <= p.lowStockThreshold
-                          ? "low"
-                          : "")
-                    }
-                  >
-                    {p.stock === 0
-                      ? "Out of stock"
-                      : p.stock <= p.lowStockThreshold
-                        ? "Low stock"
-                        : "In stock"}
-                  </span>
-                </div>
-                <div className="product-info">
-                  <span className="eyebrow">
-                    {p.category.name}
-                    {p.subcategory ? ` / ${p.subcategory.name}` : ""}
-                  </span>
-                  <h3>{p.name}</h3>
-                  <p className="small muted">
-                    {p.productId} · {p.sku}
-                  </p>
-                  {manage && (
-                    <span className="pill">
-                      {p.published ? "Published in shop" : "Private draft"}
-                    </span>
-                  )}
-                  <div className="product-bottom">
-                    <strong>
-                      {bdt(
-                        manage && p.retailPrice
-                          ? (p.salePrice ?? p.retailPrice)
-                          : p.minPrice,
-                      )}{" "}
-                      <small>
-                        {manage
-                          ? p.retailPrice
-                            ? "shop price"
-                            : "estimate"
-                          : "from"}
-                      </small>
-                    </strong>
-                    <span>
-                      {p.stock} in stock <ArrowUpRight size={16} />
+                          ? "Low stock"
+                          : "In stock"}
                     </span>
                   </div>
-                </div>
-              </button>
-            ))}
+                  <div className="product-info">
+                    <span className="eyebrow">
+                      {p.category.name}
+                      {p.subcategory ? ` / ${p.subcategory.name}` : ""}
+                    </span>
+                    <h3>{p.name}</h3>
+                    <p className="small muted">
+                      {p.productId} · {p.sku}
+                    </p>
+                    {manage && (
+                      <span className="pill">
+                        {p.published ? "Published in shop" : "Private draft"}
+                      </span>
+                    )}
+                    <div className="product-bottom">
+                      <strong>
+                        {bdt(
+                          manage && p.retailPrice
+                            ? (p.salePrice ?? p.retailPrice)
+                            : p.minPrice,
+                        )}{" "}
+                        <small>
+                          {manage
+                            ? p.retailPrice
+                              ? "shop price"
+                              : "estimate"
+                            : "from"}
+                        </small>
+                      </strong>
+                      <span>
+                        {p.stock} in stock <ArrowUpRight size={16} />
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+              return manage ? (
+                <article className="selectable-product" key={p.id}>
+                  <label className="product-select-row">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${p.name}`}
+                      checked={selected.some((s) => s.id === p.id)}
+                      onChange={(e) =>
+                        setSelected((old) =>
+                          e.target.checked
+                            ? [...old.filter((s) => s.id !== p.id), p]
+                            : old.filter((s) => s.id !== p.id),
+                        )
+                      }
+                    />
+                    Select product
+                  </label>
+                  {card}
+                  <button
+                    type="button"
+                    className="danger product-delete-button"
+                    aria-label={`Delete ${p.name}`}
+                    onClick={() => requestDelete([p])}
+                  >
+                    Delete product
+                  </button>
+                </article>
+              ) : (
+                card
+              );
+            })}
           </div>
           <div className="pagination">
             <span className="muted small">
@@ -833,6 +944,10 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
           <ProductDetail
             product={detail}
             manage={manage}
+            onDelete={() => {
+              setDetail(undefined);
+              requestDelete([detail]);
+            }}
             onEdit={() => {
               setEditor(detail);
               setDetail(undefined);
@@ -842,6 +957,54 @@ function CatalogPage({ manage = false }: { manage?: boolean }) {
               client.invalidateQueries({ queryKey: ["catalog"] });
             }}
           />
+        </Modal>
+      )}
+      {deleteTargets.length > 0 && (
+        <Modal
+          title={
+            deleteTargets.length === 1
+              ? "Delete product?"
+              : `Delete ${deleteTargets.length} products?`
+          }
+          onClose={() => {
+            if (!deleting) setDeleteTargets([]);
+          }}
+        >
+          <p>
+            These products will be removed from your catalog and customer shop.
+            They cannot be restored from Archived. Existing orders, reports and
+            stock history will be preserved. Product IDs and SKUs remain
+            reserved for those records.
+          </p>
+          <ul className="delete-product-list">
+            {deleteTargets.map((p) => (
+              <li key={p.id}>
+                {p.name} <small>({p.sku})</small>
+              </li>
+            ))}
+          </ul>
+          {!!deleteError && <ErrorState error={deleteError} />}
+          <div className="actions">
+            <button
+              type="button"
+              className="danger"
+              disabled={deleting || !!deleteError}
+              onClick={confirmDelete}
+            >
+              {deleting
+                ? "Deleting…"
+                : deleteTargets.length === 1
+                  ? "Confirm delete"
+                  : "Confirm bulk delete"}
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => setDeleteTargets([])}
+            >
+              Cancel
+            </button>
+          </div>
         </Modal>
       )}
       {categories && (
@@ -1261,11 +1424,13 @@ function ProductDetail({
   manage,
   onEdit,
   onDone,
+  onDelete,
 }: {
   product: Product;
   manage: boolean;
   onEdit: () => void;
   onDone: () => void;
+  onDelete: () => void;
 }) {
   const [adjust, setAdjust] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -1322,6 +1487,9 @@ function ProductDetail({
               </a>
             )}
             <button onClick={() => setAdjust(!adjust)}>Adjust stock</button>
+            <button type="button" className="danger" onClick={onDelete}>
+              Delete product
+            </button>
             <button className="danger" onClick={() => setConfirm(true)}>
               {p.archived ? "Restore" : "Archive"}
             </button>

@@ -69,6 +69,7 @@ model Product {
  stock Int @default(0)
  lowStockThreshold Int @default(5)
  archived Boolean @default(false)
+ deletedAt DateTime? @db.Timestamptz(3)
  version Int @default(1)
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -84,6 +85,7 @@ model Product {
  adjustments StockAdjustment[]
  @@index([archived,categoryId,name])
  @@index([subcategoryId,categoryId])
+ @@index([deletedAt])
 }
 model StoreSettings {
  id String @id @default("main")

@@ -126,6 +126,23 @@ describe.skipIf(!enabled)("PostgreSQL API security and workflows", () => {
   });
   it("rejects direct API access and CSRF mutations for unauthorized users", async () => {
     expect((await shop.get("/api/products")).status).toBe(403);
+    expect(
+      (
+        await send(
+          shop,
+          `/api/products/${randomUUID()}`,
+          { version: 1 },
+          "delete",
+        )
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await send(shop, "/api/products/bulk-delete", {
+          products: [{ id: randomUUID(), version: 1 }],
+        })
+      ).status,
+    ).toBe(403);
     expect((await shop.get("/api/admin/users")).status).toBe(403);
     expect((await manager.get("/api/admin/permissions")).status).toBe(403);
     expect(

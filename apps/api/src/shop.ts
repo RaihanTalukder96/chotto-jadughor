@@ -211,6 +211,7 @@ const select = {
   stock: true,
 } as const;
 const visible: Prisma.ProductWhereInput = {
+  deletedAt: null,
   published: true,
   archived: false,
   retailPrice: { gt: 0 },
@@ -251,7 +252,7 @@ shop.get("/products", async (req, res) => {
   // Bound the candidate query; price filtering/sorting uses Prisma's parameterized SQL below.
   const price = Prisma.sql`COALESCE(p."salePrice",p."retailPrice")`;
   const search = `%${q.search.replace(/[\\%_]/g, "\\$&")}%`;
-  const filters = Prisma.sql`p.published=true AND p.archived=false AND p."retailPrice">0 AND (p.name ILIKE ${search} OR p.sku ILIKE ${search} OR p.brand ILIKE ${search}) ${q.categoryId ? Prisma.sql`AND p."categoryId"=${q.categoryId}::uuid` : Prisma.empty} ${q.subcategoryId ? Prisma.sql`AND p."subcategoryId"=${q.subcategoryId}::uuid` : Prisma.empty} ${q.brand ? Prisma.sql`AND p.brand=${q.brand}` : Prisma.empty} ${q.sale ? Prisma.sql`AND p."salePrice" IS NOT NULL` : Prisma.empty} ${q.featured ? Prisma.sql`AND p.featured=true` : Prisma.empty} ${q.min ? Prisma.sql`AND ${price}>=${q.min}::numeric` : Prisma.empty} ${q.max ? Prisma.sql`AND ${price}<=${q.max}::numeric` : Prisma.empty}`;
+  const filters = Prisma.sql`p."deletedAt" IS NULL AND p.published=true AND p.archived=false AND p."retailPrice">0 AND (p.name ILIKE ${search} OR p.sku ILIKE ${search} OR p.brand ILIKE ${search}) ${q.categoryId ? Prisma.sql`AND p."categoryId"=${q.categoryId}::uuid` : Prisma.empty} ${q.subcategoryId ? Prisma.sql`AND p."subcategoryId"=${q.subcategoryId}::uuid` : Prisma.empty} ${q.brand ? Prisma.sql`AND p.brand=${q.brand}` : Prisma.empty} ${q.sale ? Prisma.sql`AND p."salePrice" IS NOT NULL` : Prisma.empty} ${q.featured ? Prisma.sql`AND p.featured=true` : Prisma.empty} ${q.min ? Prisma.sql`AND ${price}>=${q.min}::numeric` : Prisma.empty} ${q.max ? Prisma.sql`AND ${price}<=${q.max}::numeric` : Prisma.empty}`;
   const order =
     q.sort === "price-asc"
       ? Prisma.sql`${price} ASC,p.id`

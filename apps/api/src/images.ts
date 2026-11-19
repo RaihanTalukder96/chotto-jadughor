@@ -58,7 +58,7 @@ async function saveImages(req: Request, res: Response, append: boolean) {
     : ((req.files as Express.Multer.File[] | undefined) ?? []);
   if (!files.length) fail(400, "Select at least one image");
   const product = await db.product.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     include: { images: { orderBy: { position: "asc" } } },
   });
   if (!product) fail(404, "Product not found");
@@ -107,7 +107,7 @@ async function saveImages(req: Request, res: Response, append: boolean) {
   }
   const images = await db.$transaction(async (tx) => {
     const changed = await tx.product.updateMany({
-      where: { id, version },
+      where: { id, version, deletedAt: null },
       data: { version: { increment: 1 } },
     });
     if (!changed.count) fail(409, "Product changed. Reload first");
@@ -179,7 +179,7 @@ async function changeGallery(req: Request, res: Response, cover: boolean) {
     .parse(req.body);
   const images = await db.$transaction(async (tx) => {
     const changed = await tx.product.updateMany({
-      where: { id, version },
+      where: { id, version, deletedAt: null },
       data: { version: { increment: 1 } },
     });
     if (!changed.count) fail(409, "Product changed. Reload first");
