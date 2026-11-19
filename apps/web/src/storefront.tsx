@@ -40,6 +40,7 @@ import {
 import { toast } from "sonner";
 import { bdt, type Category } from "./api";
 import "./storefront.css";
+import { productOriginLabel } from "./product-origin";
 import { ImageGallery } from "./image-gallery";
 
 export type StoreSettings = {
@@ -67,6 +68,8 @@ type ShopProduct = {
   brand: string;
   ageRange: string;
   specifications: string;
+  originType: "IMPORTED" | "BANGLADESH" | null;
+  importCountry: string | null;
   options: { name: string; values: string[] }[];
   images: { url: string; thumbnail: string }[];
   category: { id: string; name: string };
@@ -970,6 +973,9 @@ function ProductPage() {
             {p.ageRange}
             {p.ageRange && " · "}SKU: {p.sku}
           </p>
+          {productOriginLabel(p) && (
+            <p className="product-origin-label">{productOriginLabel(p)}</p>
+          )}
           <div className="sf-prices sf-detail-price">
             <strong>{bdt(price(p))}</strong>
             {p.salePrice && <del>{bdt(p.retailPrice)}</del>}

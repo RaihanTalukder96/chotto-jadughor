@@ -384,6 +384,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         { name: "Color", values: ["Red", "Blue"] },
       ];
       const data = {
+        originType: "BANGLADESH",
         productId: original.productId,
         sku: original.sku,
         name: original.name,

@@ -1817,3 +1817,21 @@ footer {
     font-size: 11px;
   }
 }
+.product-origin-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+.product-origin-choices .check {
+  margin-bottom: 0;
+}
+.product-origin-label {
+  display: inline-block;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--primary-soft);
+  color: var(--ink);
+  font-size: 12px;
+}

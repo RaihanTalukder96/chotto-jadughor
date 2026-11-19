@@ -9,6 +9,10 @@ enum Role {
  MANAGER
  SHOPKEEPER
 }
+enum ProductOrigin {
+ IMPORTED
+ BANGLADESH
+}
 model User {
  id String @id @default(uuid()) @db.Uuid
  username String
@@ -81,6 +85,8 @@ model Product {
  brand String @default("")
  ageRange String @default("")
  specifications String @default("")
+ originType ProductOrigin?
+ importCountry String? @db.Char(2)
  options Json @default("[]")
  adjustments StockAdjustment[]
  @@index([archived,categoryId,name])

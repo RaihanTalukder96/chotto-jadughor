@@ -6,6 +6,7 @@ import { Decimal } from "decimal.js";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "./db.js";
+import { importCountries } from "./countries.js";
 import {
   selectedOptionsSchema,
   optionKey,
@@ -27,6 +28,9 @@ import {
 
 export const shop = Router();
 export const commerce = Router();
+shop.get("/countries", (_req, res) => {
+  res.json(importCountries);
+});
 const csrfCookie = production ? "__Host-cj_shop_csrf" : "cj_shop_csrf";
 const sessionCookie = production ? "__Host-cj_customer" : "cj_customer";
 const publicCustomer = (c: { id: string; name: string; email: string }) => ({
@@ -201,6 +205,8 @@ const select = {
   brand: true,
   ageRange: true,
   specifications: true,
+  originType: true,
+  importCountry: true,
   category: true,
   subcategory: true,
   images: {

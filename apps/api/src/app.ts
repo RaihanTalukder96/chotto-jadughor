@@ -203,6 +203,8 @@ const safeSelect = {
   brand: true,
   ageRange: true,
   specifications: true,
+  originType: true,
+  importCountry: true,
   description: true,
   minPrice: true,
   maxPrice: true,

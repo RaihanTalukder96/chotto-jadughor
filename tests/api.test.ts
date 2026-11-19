@@ -169,6 +169,7 @@ describe.skipIf(!enabled)("PostgreSQL API security and workflows", () => {
       sku: prefix,
       name: "শিশুর পোশাক",
       categoryId: category,
+      originType: "BANGLADESH",
       description: "",
       buyingPrice: "100.10",
       minPrice: "150.30",
@@ -229,6 +230,7 @@ describe.skipIf(!enabled)("PostgreSQL API security and workflows", () => {
       sku: prefix + "-sub",
       name: "Subcategory product",
       categoryId: category,
+      originType: "BANGLADESH",
       subcategoryId: sub.body.id,
       buyingPrice: "1",
       minPrice: "2",
@@ -285,6 +287,77 @@ describe.skipIf(!enabled)("PostgreSQL API security and workflows", () => {
       (await send(manager, `/api/subcategories/${sub.body.id}`, {}, "delete"))
         .status,
     ).toBe(200);
+  });
+  it("requires an exclusive product source and a valid foreign country for imports", async () => {
+    const data = {
+      productId: prefix + "-origin",
+      sku: prefix + "-origin",
+      name: "Origin test",
+      categoryId: category,
+      buyingPrice: "50",
+      minPrice: "100",
+      maxPrice: "100",
+      retailPrice: "100",
+      published: true,
+      stock: 1,
+      lowStockThreshold: 1,
+    };
+    for (const patch of [
+      {},
+      { originType: "IMPORTED" },
+      { originType: "IMPORTED", importCountry: "BD" },
+      { originType: "IMPORTED", importCountry: "ZZ" },
+      { originType: "BANGLADESH", importCountry: "CN" },
+      { originType: ["IMPORTED", "BANGLADESH"] },
+    ]) {
+      expect(
+        (await send(manager, "/api/products", { ...data, ...patch })).status,
+      ).toBe(400);
+    }
+    const countries = await request(app).get("/api/shop/countries");
+    expect(countries.status).toBe(200);
+    expect(countries.body).toContainEqual({ code: "CN", name: "China" });
+    expect(countries.body.some((c: any) => c.code === "BD")).toBe(false);
+    const created = await send(manager, "/api/products", {
+      ...data,
+      originType: "IMPORTED",
+      importCountry: "CN",
+    });
+    expect(created.status).toBe(201);
+    expect(
+      (await request(app).get(`/api/shop/products/${created.body.id}`)).body
+        .importCountry,
+    ).toBe("CN");
+    const local = await send(
+      manager,
+      `/api/products/${created.body.id}`,
+      {
+        ...data,
+        originType: "BANGLADESH",
+        importCountry: null,
+        version: created.body.version,
+      },
+      "put",
+    );
+    expect(local.status).toBe(200);
+    expect(local.body.importCountry).toBeNull();
+    expect(
+      (await request(app).get(`/api/shop/products/${created.body.id}`)).body
+        .originType,
+    ).toBe("BANGLADESH");
+    const imported = await send(
+      manager,
+      `/api/products/${created.body.id}`,
+      {
+        ...data,
+        originType: "IMPORTED",
+        importCountry: "US",
+        version: local.body.version,
+      },
+      "put",
+    );
+    expect(imported.status).toBe(200);
+    expect(imported.body.importCountry).toBe("US");
   });
   it("excludes confidential costs from dashboard responses", async () => {
     const result = await shop.get("/api/dashboard?search=" + prefix);

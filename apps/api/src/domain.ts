@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Decimal } from "decimal.js";
 import { productOptionsSchema } from "./product-options.js";
+import { isImportCountry } from "./countries.js";
 export const money = z
   .string()
   .regex(
@@ -51,8 +52,27 @@ export const productSchema = z
     ageRange: z.string().trim().max(100).default(""),
     specifications: z.string().max(5000).default(""),
     options: productOptionsSchema.optional(),
+    originType: z.enum(["IMPORTED", "BANGLADESH"], {
+      message: "Choose Imported from or Made in Bangladesh",
+    }),
+    importCountry: z
+      .string()
+      .refine(isImportCountry, "Select a valid country outside Bangladesh")
+      .nullable()
+      .default(null),
   })
   .strict()
+  .refine(
+    (v) =>
+      v.originType === "IMPORTED"
+        ? v.importCountry !== null
+        : v.importCountry === null,
+    {
+      path: ["importCountry"],
+      message:
+        "Imported products require a country; Made in Bangladesh products must not have an import country",
+    },
+  )
   .refine((v) => new Decimal(v.maxPrice).gte(v.minPrice), {
     message: "Maximum price must be at least minimum price",
     path: ["maxPrice"],

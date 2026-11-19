@@ -48,6 +48,9 @@ test("login, create product, find dashboard card, save estimate and download pro
     .getByRole("combobox", { name: "Category", exact: true })
     .selectOption({ label: "Clothing" });
   await page.getByLabel("Buying price").fill("100.10");
+  await page
+    .getByRole("radio", { name: "Made in Bangladesh", exact: true })
+    .check();
   await page.getByLabel("Minimum selling price").fill("150.30");
   await page.getByLabel("Maximum selling price").fill("200.50");
   await page.getByLabel("Opening stock").fill("10");

@@ -21,6 +21,8 @@ export type Product = {
   brand: string;
   ageRange: string;
   specifications: string;
+  originType: "IMPORTED" | "BANGLADESH" | null;
+  importCountry: string | null;
   options: { name: string; values: string[] }[];
   buyingPrice?: string;
   minPrice: string;

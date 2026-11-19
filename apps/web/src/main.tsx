@@ -40,6 +40,7 @@ import {
   type Category,
 } from "./api";
 import "./style.css";
+import { productOriginLabel } from "./product-origin";
 import { ImageGallery } from "./image-gallery";
 import { ProductGalleryEditor } from "./product-gallery-editor";
 import { CommerceAdmin } from "./commerce-admin";
@@ -1035,6 +1036,10 @@ const formSchema = z
     brand: z.string().max(100),
     ageRange: z.string().max(100),
     specifications: z.string().max(5000),
+    originType: z
+      .enum(["", "IMPORTED", "BANGLADESH"])
+      .refine((v) => v !== "", "Choose Imported from or Made in Bangladesh"),
+    importCountry: z.string(),
     options: z
       .array(
         z.object({
@@ -1050,6 +1055,12 @@ const formSchema = z
     stock: z.number().int().nonnegative(),
     lowStockThreshold: z.number().int().nonnegative(),
   })
+  .refine(
+    (v) =>
+      v.originType !== "IMPORTED" ||
+      (v.importCountry.length === 2 && v.importCountry !== "BD"),
+    { path: ["importCountry"], message: "Select the import country" },
+  )
   .refine((v) => Number(v.maxPrice) >= Number(v.minPrice), {
     path: ["maxPrice"],
     message: "Maximum must be at least minimum price",
@@ -1078,6 +1089,10 @@ function ProductForm({
     queryKey: ["categories"],
     queryFn: () => api<Category[]>("/categories"),
   });
+  const countries = useQuery({
+    queryKey: ["import-countries"],
+    queryFn: () => api<{ code: string; name: string }[]>("/shop/countries"),
+  });
   const [files, setFiles] = useState<File[]>([]);
   const [gallery, setGallery] = useState({
     images: product?.images ?? [],
@@ -1097,6 +1112,8 @@ function ProductForm({
       ? {
           ...product,
           buyingPrice: product.buyingPrice!,
+          originType: product.originType ?? "",
+          importCountry: product.importCountry ?? "",
           options: (product.options ?? []).map((o) => ({
             name: o.name,
             valuesText: o.values.join(", "),
@@ -1125,6 +1142,8 @@ function ProductForm({
           brand: "",
           ageRange: "",
           specifications: "",
+          originType: "",
+          importCountry: "",
           options: [],
         },
   });
@@ -1148,6 +1167,8 @@ function ProductForm({
                   .map((v) => v.trim())
                   .filter(Boolean),
               })),
+              importCountry:
+                values.originType === "IMPORTED" ? values.importCountry : null,
               subcategoryId: values.subcategoryId || null,
               retailPrice: values.retailPrice || null,
               salePrice: values.salePrice || null,
@@ -1266,6 +1287,67 @@ function ProductForm({
           />
         </label>
       </div>
+      <fieldset className="shop-product-fields product-origin-fields">
+        <legend>Product source · required</legend>
+        <div className="product-origin-choices">
+          <label className="check">
+            <input
+              type="radio"
+              value="IMPORTED"
+              required
+              {...register("originType")}
+            />
+            Imported from
+          </label>
+          <label className="check">
+            <input
+              type="radio"
+              value="BANGLADESH"
+              required
+              {...register("originType", {
+                onChange: (e) => {
+                  if (e.target.value === "BANGLADESH")
+                    setValue("importCountry", "");
+                },
+              })}
+            />
+            Made in Bangladesh
+          </label>
+        </div>
+        {errors.originType && (
+          <p className="danger" role="alert">
+            {errors.originType.message}
+          </p>
+        )}
+        {watch("originType") === "IMPORTED" && (
+          <label>
+            Import country
+            <select
+              {...register("importCountry")}
+              required
+              disabled={countries.isLoading || !!countries.error}
+            >
+              <option value="">Choose country</option>
+              {countries.data?.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+            {errors.importCountry && (
+              <small className="danger">{errors.importCountry.message}</small>
+            )}
+            {countries.error && (
+              <small className="danger" role="alert">
+                Could not load countries.{" "}
+                <button type="button" onClick={() => countries.refetch()}>
+                  Retry
+                </button>
+              </small>
+            )}
+          </label>
+        )}
+      </fieldset>
       <label>
         Description
         <textarea {...register("description")} />
@@ -1451,6 +1533,9 @@ function ProductDetail({
       <p className="muted">
         {p.productId} · {p.sku}
       </p>
+      {productOriginLabel(p) && (
+        <p className="product-origin-label">{productOriginLabel(p)}</p>
+      )}
       <p className="prewrap">{p.description || "No description added."}</p>
       <div className="metrics">
         <div>

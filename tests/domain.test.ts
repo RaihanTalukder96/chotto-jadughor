@@ -64,6 +64,7 @@ describe("Authoritative decimal estimates", () => {
       sku: "CJ-1",
       name: "Baby",
       categoryId: id,
+      originType: "BANGLADESH",
       stock: 0,
       lowStockThreshold: 5,
       buyingPrice: "10",
