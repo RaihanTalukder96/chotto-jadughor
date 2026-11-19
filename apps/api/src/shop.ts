@@ -6,6 +6,11 @@ import { Decimal } from "decimal.js";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "./db.js";
+import {
+  selectedOptionsSchema,
+  optionKey,
+  validateSelection,
+} from "./product-options.js";
 import { production } from "./config.js";
 import { money, strongPassword } from "./domain.js";
 import {
@@ -198,7 +203,11 @@ const select = {
   specifications: true,
   category: true,
   subcategory: true,
-  images: { select: { url: true, thumbnail: true } },
+  images: {
+    orderBy: { position: "asc" as const },
+    select: { url: true, thumbnail: true },
+  },
+  options: true,
   stock: true,
 } as const;
 const visible: Prisma.ProductWhereInput = {
@@ -295,6 +304,7 @@ const cartSchema = z
           .object({
             productId: z.uuid(),
             quantity: z.number().int().min(1).max(50),
+            selectedOptions: selectedOptionsSchema.default({}),
           })
           .strict(),
       )
@@ -303,8 +313,10 @@ const cartSchema = z
   })
   .strict()
   .refine(
-    (v) => new Set(v.items.map((i) => i.productId)).size === v.items.length,
-    "Each product must appear once",
+    (v) =>
+      new Set(v.items.map((i) => i.productId + optionKey(i.selectedOptions)))
+        .size === v.items.length,
+    "Each product option combination must appear once",
   );
 type Cart = z.infer<typeof cartSchema>;
 async function quote(tx: Prisma.TransactionClient, cart: Cart) {
@@ -322,13 +334,22 @@ async function quote(tx: Prisma.TransactionClient, cart: Cart) {
     const p = products.find((p) => p.id === i.productId);
     if (!p || !p.retailPrice)
       fail(409, "A product is no longer available. Please update your cart.");
-    if (p.stock < i.quantity) fail(409, `${p.name}: only ${p.stock} available`);
+    const requested = cart.items
+      .filter((line) => line.productId === p.id)
+      .reduce((sum, line) => sum + line.quantity, 0);
+    if (p.stock < requested)
+      fail(
+        409,
+        `${p.name}: only ${p.stock} available across all selected options`,
+      );
+    const selectedOptions = validateSelection(p.options, i.selectedOptions);
     const price = new Decimal((p.salePrice ?? p.retailPrice).toString());
     return {
       productId: p.id,
       name: p.name,
       sku: p.sku,
       quantity: i.quantity,
+      selectedOptions,
       unitPrice: price.toFixed(2),
       lineTotal: price.mul(i.quantity).toFixed(2),
     };
@@ -405,6 +426,7 @@ const receipt = {
       quantity: true,
       unitPrice: true,
       lineTotal: true,
+      selectedOptions: true,
     },
   },
 } as const;
@@ -428,7 +450,9 @@ shop.post("/orders", orderLimit, async (req, res) => {
         !existing.items.every((i) =>
           b.cart.items.some(
             (line) =>
-              line.productId === i.productId && line.quantity === i.quantity,
+              line.productId === i.productId &&
+              line.quantity === i.quantity &&
+              optionKey(line.selectedOptions) === optionKey(i.selectedOptions),
           ),
         )
       )

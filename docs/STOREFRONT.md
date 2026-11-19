@@ -1,5 +1,7 @@
 # Customer shop and administration
 
+See [product galleries and options](PRODUCT_MEDIA_OPTIONS.md) for four-photo galleries, Size/Color/Type choices and the cart/order API additions.
+
 Both portals use the existing project, API, database and domain. The customer shop lives at `/`; the staff workspace moved to `/admin`. On Render keep `SERVE_WEB=true`, and set `APP_ORIGIN` to the exact public origin, without a trailing slash. No separate Vercel project, domain, payment provider or paid service is required for this feature.
 
 ## Routes

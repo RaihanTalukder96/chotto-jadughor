@@ -20,7 +20,13 @@ type Order = {
   status: string;
   version: number;
   createdAt: string;
-  items: { name: string; sku: string; quantity: number; lineTotal: string }[];
+  items: {
+    name: string;
+    sku: string;
+    quantity: number;
+    lineTotal: string;
+    selectedOptions?: Record<string, string>;
+  }[];
 };
 const next: Record<string, string[]> = {
   PENDING: ["CONFIRMED", "CANCELLED"],
@@ -307,6 +313,13 @@ export function CommerceAdmin({ mode }: { mode: "settings" | "orders" }) {
                     {o.items.map((i, n) => (
                       <p key={n}>
                         {i.name} · {i.sku} × {i.quantity} — {bdt(i.lineTotal)}
+                        {Object.keys(i.selectedOptions ?? {}).length > 0 && (
+                          <small className="sf-selected-options">
+                            {Object.entries(i.selectedOptions ?? {})
+                              .map(([name, value]) => `${name}: ${value}`)
+                              .join(" · ")}
+                          </small>
+                        )}
                       </p>
                     ))}
                     <p>Delivery: {bdt(o.delivery)}</p>

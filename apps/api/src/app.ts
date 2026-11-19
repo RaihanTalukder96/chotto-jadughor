@@ -209,7 +209,8 @@ const safeSelect = {
   lowStockThreshold: true,
   archived: true,
   version: true,
-  images: true,
+  images: { orderBy: { position: "asc" as const } },
+  options: true,
   updatedAt: true,
 } as const;
 async function catalog(req: Request, privileged = false) {
@@ -768,7 +769,7 @@ app.use(
       error.code !== "LIMIT_FILE_SIZE"
     ) {
       status = 400;
-      message = "Upload exactly one image and its product version";
+      message = "Upload up to 4 gallery images (or one replacement) and the product version";
     }
     if (status === 500)
       logger.error(

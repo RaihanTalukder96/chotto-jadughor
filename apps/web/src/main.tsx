@@ -40,6 +40,8 @@ import {
   type Category,
 } from "./api";
 import "./style.css";
+import { ImageGallery } from "./image-gallery";
+import { ProductGalleryEditor } from "./product-gallery-editor";
 import { CommerceAdmin } from "./commerce-admin";
 const client = new QueryClient({
   defaultOptions: {
@@ -870,6 +872,14 @@ const formSchema = z
     brand: z.string().max(100),
     ageRange: z.string().max(100),
     specifications: z.string().max(5000),
+    options: z
+      .array(
+        z.object({
+          name: z.string().trim().min(1).max(30),
+          valuesText: z.string().trim().min(1),
+        }),
+      )
+      .max(3),
     description: z.string().max(3000),
     buyingPrice: amount,
     minPrice: amount,
@@ -905,7 +915,12 @@ function ProductForm({
     queryKey: ["categories"],
     queryFn: () => api<Category[]>("/categories"),
   });
-  const [file, setFile] = useState<File>();
+  const [files, setFiles] = useState<File[]>([]);
+  const [gallery, setGallery] = useState({
+    images: product?.images ?? [],
+    version: product?.version ?? 0,
+  });
+  const [imageBusy, setImageBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const {
     register,
@@ -919,6 +934,10 @@ function ProductForm({
       ? {
           ...product,
           buyingPrice: product.buyingPrice!,
+          options: (product.options ?? []).map((o) => ({
+            name: o.name,
+            valuesText: o.values.join(", "),
+          })),
           retailPrice: product.retailPrice ?? "",
           salePrice: product.salePrice ?? "",
           categoryId: product.category.id,
@@ -943,6 +962,7 @@ function ProductForm({
           brand: "",
           ageRange: "",
           specifications: "",
+          options: [],
         },
   });
   return (
@@ -950,29 +970,41 @@ function ProductForm({
       onSubmit={handleSubmit(async (values) => {
         try {
           setError(undefined);
+          if (files.length + gallery.images.length > 4)
+            throw new Error("A product can have at most 4 images");
+          if (files.some((f) => f.size > 5 * 1024 * 1024))
+            throw new Error("Each image must be 5 MB or smaller");
           const p = await post(
             product ? `/products/${product.id}` : "/products",
             {
               ...values,
+              options: values.options.map((o) => ({
+                name: o.name,
+                values: o.valuesText
+                  .split(",")
+                  .map((v) => v.trim())
+                  .filter(Boolean),
+              })),
               subcategoryId: values.subcategoryId || null,
               retailPrice: values.retailPrice || null,
               salePrice: values.salePrice || null,
-              ...(product ? { version: product.version } : {}),
+              ...(product ? { version: gallery.version } : {}),
             },
             product ? "PUT" : "POST",
           );
-          if (file) {
+          if (files.length) {
             const data = new FormData();
-            data.set("image", file);
+            files.forEach((file) => data.append("images", file));
             data.set("version", String(p.version));
             try {
-              await api(`/products/${p.id}/image`, {
+              await api(`/products/${p.id}/images`, {
                 method: "POST",
                 body: data,
               });
             } catch (e) {
               toast.error(
-                "Product saved, but image failed: " + (e as Error).message,
+                "Product saved, but gallery upload failed: " +
+                  (e as Error).message,
               );
             }
           }
@@ -1118,21 +1150,107 @@ function ProductForm({
           Feature on homepage
         </label>
       </fieldset>
-      <label>
-        Main image · JPEG, PNG or WebP · up to 5 MB
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={(e) => setFile(e.target.files?.[0])}
-        />
-      </label>
+      <fieldset className="shop-product-fields">
+        <legend>Product images</legend>
+        {product && (
+          <ProductGalleryEditor
+            productId={product.id}
+            images={gallery.images}
+            version={gallery.version}
+            onChange={(images, version) => setGallery({ images, version })}
+            onBusy={setImageBusy}
+          />
+        )}
+        <label>
+          Add images · JPEG, PNG or WebP · 5 MB each · up to 4 total
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp"
+            disabled={imageBusy || gallery.images.length >= 4}
+            onChange={(e) => {
+              const selected = Array.from(e.target.files ?? []);
+              if (
+                selected.length + gallery.images.length > 4 ||
+                selected.some((f) => f.size > 5 * 1024 * 1024)
+              ) {
+                toast.error(
+                  "Choose up to 4 images total, no larger than 5 MB each",
+                );
+                e.target.value = "";
+                setFiles([]);
+                return;
+              }
+              setFiles(selected);
+            }}
+          />
+        </label>
+        {files.length > 0 && (
+          <p className="muted">
+            {files.length} image(s) will be added when you save.
+          </p>
+        )}
+      </fieldset>
+      <fieldset className="shop-product-fields">
+        <legend>Customer options · optional</legend>
+        <p className="muted">
+          Add Size, Color or Type. Customers must choose one value from each
+          group. All choices share this product's price and total stock.
+        </p>
+        {watch("options").map((_, index) => (
+          <div className="option-editor-row" key={index}>
+            <label>
+              Option name
+              <input
+                placeholder="Size"
+                {...register(`options.${index}.name`)}
+              />
+            </label>
+            <label>
+              Choices · separate with commas
+              <input
+                placeholder="S, M, L, XL"
+                {...register(`options.${index}.valuesText`)}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() =>
+                setValue(
+                  "options",
+                  watch("options").filter((_, i) => i !== index),
+                )
+              }
+            >
+              Remove option {index + 1}
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          disabled={watch("options").length >= 3}
+          onClick={() =>
+            setValue("options", [
+              ...watch("options"),
+              { name: "", valuesText: "" },
+            ])
+          }
+        >
+          Add option group
+        </button>
+        {errors.options && (
+          <p className="danger">
+            Enter a name and at least one choice for each option group.
+          </p>
+        )}
+      </fieldset>
       {Number(watch("buyingPrice")) > Number(watch("minPrice")) && (
         <p className="notice warning">
           Buying price exceeds minimum selling price. This may produce a loss.
         </p>
       )}
       {!!error && <ErrorState error={error} />}
-      <button className="primary" disabled={isSubmitting}>
+      <button className="primary" disabled={isSubmitting || imageBusy}>
         {isSubmitting ? "Saving…" : "Save product"}
       </button>
     </form>
@@ -1159,9 +1277,7 @@ function ProductDetail({
   });
   return (
     <div>
-      {p.images[0] && (
-        <img className="detail-image" src={p.images[0].url} alt={p.name} />
-      )}
+      {p.images[0] && <ImageGallery images={p.images} name={p.name} compact />}
       <span className="eyebrow">
         {p.category.name}
         {p.subcategory ? ` / ${p.subcategory.name}` : ""}

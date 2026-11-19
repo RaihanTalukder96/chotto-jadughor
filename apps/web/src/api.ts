@@ -21,6 +21,7 @@ export type Product = {
   brand: string;
   ageRange: string;
   specifications: string;
+  options: { name: string; values: string[] }[];
   buyingPrice?: string;
   minPrice: string;
   maxPrice: string;
@@ -28,7 +29,7 @@ export type Product = {
   lowStockThreshold: number;
   archived: boolean;
   version: number;
-  images: { thumbnail: string; url: string }[];
+  images: { id: string; thumbnail: string; url: string; position: number }[];
 };
 export type Catalog = {
   items: Product[];

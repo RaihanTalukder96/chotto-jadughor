@@ -375,6 +375,224 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
       ).toBe(200);
       expect((await customer.get("/api/shop/orders")).status).toBe(401);
     });
+    it("validates product options and preserves different selections in one order", async () => {
+      const original = await db.product.findUnique({
+        where: { id: product.id },
+      });
+      const options = [
+        { name: "Size", values: ["S", "M"] },
+        { name: "Color", values: ["Red", "Blue"] },
+      ];
+      const data = {
+        productId: original.productId,
+        sku: original.sku,
+        name: original.name,
+        categoryId: category.id,
+        buyingPrice: String(original.buyingPrice),
+        minPrice: String(original.minPrice),
+        maxPrice: String(original.maxPrice),
+        retailPrice: String(original.retailPrice),
+        salePrice: String(original.salePrice),
+        stock: original.stock,
+        lowStockThreshold: original.lowStockThreshold,
+        published: true,
+        options,
+        version: original.version,
+      };
+      expect(
+        (
+          await send(
+            admin,
+            `/api/products/${product.id}`,
+            { ...data, options: [{ name: "Size", values: ["M", "m"] }] },
+            "put",
+          )
+        ).status,
+      ).toBe(400);
+      const saved = await send(
+        admin,
+        `/api/products/${product.id}`,
+        data,
+        "put",
+      );
+      expect(saved.status).toBe(200);
+      const { options: _options, ...legacy } = data;
+      expect(
+        (
+          await send(
+            admin,
+            `/api/products/${product.id}`,
+            { ...legacy, version: saved.body.version },
+            "put",
+          )
+        ).status,
+      ).toBe(200);
+      try {
+        expect(
+          (await guest.get(`/api/shop/products/${product.id}`)).body.options,
+        ).toEqual(options);
+        expect((await send(guest, "/api/shop/quote", cart())).status).toBe(400);
+        const selected = { Size: "S", Color: "Red" };
+        const item = {
+          productId: product.id,
+          quantity: 1,
+          selectedOptions: selected,
+        };
+        const input = {
+          zone: "DHAKA",
+          items: [
+            item,
+            { ...item, selectedOptions: { Size: "M", Color: "Blue" } },
+          ],
+        };
+        expect(
+          (
+            await send(guest, "/api/shop/quote", {
+              zone: "DHAKA",
+              items: [
+                { ...item, selectedOptions: { Size: "XL", Color: "Red" } },
+              ],
+            })
+          ).status,
+        ).toBe(400);
+        expect(
+          (
+            await send(guest, "/api/shop/quote", {
+              zone: "DHAKA",
+              items: [
+                item,
+                { ...item, selectedOptions: { Color: "Red", Size: "S" } },
+              ],
+            })
+          ).status,
+        ).toBe(400);
+        expect(
+          (await send(guest, "/api/shop/quote", input)).body.lines[0]
+            .selectedOptions,
+        ).toEqual(selected);
+        const orderBody = { ...checkout(2), cart: input };
+        const order = await send(guest, "/api/shop/orders", orderBody);
+        expect(order.status).toBe(201);
+        expect(order.body.items.map((i: any) => i.selectedOptions)).toEqual(
+          expect.arrayContaining([selected, { Size: "M", Color: "Blue" }]),
+        );
+        expect((await send(guest, "/api/shop/orders", orderBody)).body.id).toBe(
+          order.body.id,
+        );
+        expect(
+          (
+            await send(guest, "/api/shop/orders", {
+              ...orderBody,
+              cart: {
+                ...input,
+                items: [
+                  item,
+                  { ...item, selectedOptions: { Size: "M", Color: "Red" } },
+                ],
+              },
+            })
+          ).status,
+        ).toBe(409);
+        const adminOrder = await admin.get(
+          `/api/commerce/orders?search=${order.body.orderNumber}`,
+        );
+        expect(adminOrder.body.items[0].items[0].selectedOptions).toEqual(
+          selected,
+        );
+        await db.product.update({
+          where: { id: product.id },
+          data: { stock: 1 },
+        });
+        expect((await send(guest, "/api/shop/quote", input)).status).toBe(409);
+        await db.product.update({
+          where: { id: product.id },
+          data: { options: [] },
+        });
+        expect(
+          (
+            await send(guest, "/api/shop/track", {
+              orderNumber: order.body.orderNumber,
+              trackingToken: orderBody.trackingToken,
+            })
+          ).body.items[0].selectedOptions,
+        ).toEqual(selected);
+      } finally {
+        await db.product.update({
+          where: { id: product.id },
+          data: { stock: original.stock, options: [] },
+        });
+      }
+    });
+    it("orders galleries, changes cover, and queues only removed assets for cleanup", async () => {
+      const before = await db.product.findUnique({ where: { id: product.id } });
+      const images = await Promise.all(
+        Array.from({ length: 4 }, (_, position) =>
+          db.productImage.create({
+            data: {
+              productId: product.id,
+              publicId: `${prefix}-${position}`,
+              url: `https://res.cloudinary.com/test/image-${position}.webp`,
+              thumbnail: `https://res.cloudinary.com/test/thumb-${position}.webp`,
+              position,
+            },
+          }),
+        ),
+      );
+      try {
+        const read = await guest.get(`/api/shop/products/${product.id}`);
+        expect(read.body.images.map((i: any) => i.url)).toEqual(
+          images.map((i) => i.url),
+        );
+        const cover = await send(
+          admin,
+          `/api/products/${product.id}/images/${images[3].id}/cover`,
+          { version: before.version },
+          "patch",
+        );
+        expect(cover.status).toBe(200);
+        expect(cover.body.images[0].id).toBe(images[3].id);
+        expect(
+          (
+            await send(
+              admin,
+              `/api/products/${product.id}/images/${images[0].id}`,
+              { version: before.version },
+              "delete",
+            )
+          ).status,
+        ).toBe(409);
+        const removed = await send(
+          admin,
+          `/api/products/${product.id}/images/${images[0].id}`,
+          { version: cover.body.version },
+          "delete",
+        );
+        expect(removed.status).toBe(200);
+        expect(removed.body.images.map((i: any) => i.position)).toEqual([
+          0, 1, 2,
+        ]);
+        expect(
+          await db.assetCleanup.findUnique({
+            where: { publicId: images[0].publicId },
+          }),
+        ).not.toBeNull();
+        expect(
+          (
+            await send(
+              admin,
+              `/api/products/${product.id}/images/${randomUUID()}`,
+              { version: removed.body.version },
+              "delete",
+            )
+          ).status,
+        ).toBe(404);
+      } finally {
+        await db.productImage.deleteMany({ where: { productId: product.id } });
+        await db.assetCleanup.deleteMany({
+          where: { publicId: { in: images.map((i) => i.publicId) } },
+        });
+      }
+    });
     it("lets the administrator grant and revoke the Customer Orders menu", async () => {
       const previous = await db.rolePermission.findUnique({
         where: {

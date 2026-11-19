@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Decimal } from "decimal.js";
+import { productOptionsSchema } from "./product-options.js";
 export const money = z
   .string()
   .regex(
@@ -49,6 +50,7 @@ export const productSchema = z
     brand: z.string().trim().max(100).default(""),
     ageRange: z.string().trim().max(100).default(""),
     specifications: z.string().max(5000).default(""),
+    options: productOptionsSchema.optional(),
   })
   .strict()
   .refine((v) => new Decimal(v.maxPrice).gte(v.minPrice), {

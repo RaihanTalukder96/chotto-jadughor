@@ -80,6 +80,7 @@ model Product {
  brand String @default("")
  ageRange String @default("")
  specifications String @default("")
+ options Json @default("[]")
  adjustments StockAdjustment[]
  @@index([archived,categoryId,name])
  @@index([subcategoryId,categoryId])
@@ -158,14 +159,17 @@ model ShopOrderItem {
  quantity Int
  unitPrice Decimal @db.Decimal(14,2)
  lineTotal Decimal @db.Decimal(14,2)
+ selectedOptions Json @default("{}")
 }
 model ProductImage {
  id String @id @default(uuid()) @db.Uuid
- productId String @unique @db.Uuid
+ productId String @db.Uuid
  product Product @relation(fields:[productId],references:[id])
  publicId String @unique
  url String
  thumbnail String
+ position Int @default(0)
+ @@unique([productId,position])
 }
 model AssetCleanup {
  id String @id @default(uuid()) @db.Uuid

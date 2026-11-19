@@ -40,6 +40,7 @@ import {
 import { toast } from "sonner";
 import { bdt, type Category } from "./api";
 import "./storefront.css";
+import { ImageGallery } from "./image-gallery";
 
 export type StoreSettings = {
   acceptingOrders: boolean;
@@ -66,11 +67,24 @@ type ShopProduct = {
   brand: string;
   ageRange: string;
   specifications: string;
+  options: { name: string; values: string[] }[];
   images: { url: string; thumbnail: string }[];
   category: { id: string; name: string };
   subcategory: { id: string; name: string } | null;
 };
-type CartLine = { product: ShopProduct; quantity: number };
+type CartLine = {
+  product: ShopProduct;
+  quantity: number;
+  selectedOptions?: Record<string, string>;
+};
+const selectionKey = (values: Record<string, string> = {}) =>
+  JSON.stringify(Object.entries(values).sort(([a], [b]) => a.localeCompare(b)));
+const lineKey = (line: CartLine) =>
+  line.product.id + selectionKey(line.selectedOptions);
+const optionSummary = (values?: Record<string, string>) =>
+  Object.entries(values ?? {})
+    .map(([name, value]) => `${name}: ${value}`)
+    .join(" · ");
 type Receipt = {
   id: string;
   orderNumber: string;
@@ -85,6 +99,7 @@ type Receipt = {
     quantity: number;
     unitPrice: string;
     lineTotal: string;
+    selectedOptions?: Record<string, string>;
   }[];
 };
 type Customer = { id: string; name: string; email: string };
@@ -143,7 +158,11 @@ const Store = createContext<{
   setCart: (v: CartLine[] | ((old: CartLine[]) => CartLine[])) => void;
   wish: ShopProduct[];
   toggleWish: (p: ShopProduct) => void;
-  add: (p: ShopProduct, quantity?: number) => void;
+  add: (
+    p: ShopProduct,
+    quantity?: number,
+    selectedOptions?: Record<string, string>,
+  ) => void;
   settings?: StoreSettings;
   categories: Category[];
   customer: Customer | null;
@@ -196,6 +215,7 @@ function ProductImage({
 }
 function ProductCard({ p }: { p: ShopProduct }) {
   const { add, wish, toggleWish } = useStore();
+  const navigate = useNavigate();
   const saved = wish.some((i) => i.id === p.id);
   const discount = p.salePrice
     ? Math.round((1 - Number(p.salePrice) / Number(p.retailPrice)) * 100)
@@ -230,10 +250,16 @@ function ProductCard({ p }: { p: ShopProduct }) {
         <button
           className="sf-add"
           disabled={p.stock < 1}
-          onClick={() => add(p)}
+          onClick={() =>
+            p.options?.length ? navigate(`/product/${p.id}`) : add(p)
+          }
         >
           <ShoppingBag size={16} />
-          {p.stock > 0 ? "Add to bag" : "Out of stock"}
+          {p.stock > 0
+            ? p.options?.length
+              ? "Choose options"
+              : "Add to bag"
+            : "Out of stock"}
         </button>
       </div>
     </article>
@@ -255,18 +281,33 @@ export function Storefront() {
     queryKey: ["shop-session"],
     queryFn: () => shopApi<Session>("/session"),
   });
-  const add = (p: ShopProduct, quantity = 1) => {
-    const existing = cart.find((i) => i.product.id === p.id)?.quantity ?? 0;
-    if (existing + quantity > Math.min(p.stock, 50))
-      return toast.error("You have reached the available quantity.");
+  const add = (
+    p: ShopProduct,
+    quantity = 1,
+    selectedOptions: Record<string, string> = {},
+  ) => {
+    if (
+      (p.options ?? []).some(
+        (o) => !o.values.includes(selectedOptions[o.name] ?? ""),
+      )
+    ) {
+      toast.error("Choose the product options first");
+      return;
+    }
+    const existing = cart
+      .filter((i) => i.product.id === p.id)
+      .reduce((sum, i) => sum + i.quantity, 0);
+    if (existing + quantity > Math.min(p.stock, 50)) {
+      toast.error("You have reached the available quantity.");
+      return;
+    }
+    const key = p.id + selectionKey(selectedOptions);
     setCart((old) =>
-      old.some((i) => i.product.id === p.id)
+      old.some((i) => lineKey(i) === key)
         ? old.map((i) =>
-            i.product.id === p.id
-              ? { ...i, quantity: i.quantity + quantity }
-              : i,
+            lineKey(i) === key ? { ...i, quantity: i.quantity + quantity } : i,
           )
-        : [...old, { product: p, quantity }],
+        : [...old, { product: p, quantity, selectedOptions }],
     );
     toast.success("Added to your bag");
   };
@@ -881,6 +922,9 @@ function ProductPage() {
   const { add, toggleWish, settings } = useStore();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >({});
   const q = useQuery({
     queryKey: ["shop-product", id],
     queryFn: () => shopApi<ShopProduct>(`/products/${id}`),
@@ -893,6 +937,7 @@ function ProductPage() {
   });
   useEffect(() => {
     setQty(1);
+    setSelectedOptions({});
     window.scrollTo(0, 0);
   }, [id]);
   if (q.isLoading) return <State>Loading your little find…</State>;
@@ -904,6 +949,9 @@ function ProductPage() {
       </State>
     );
   const p = q.data;
+  const optionsComplete = (p.options ?? []).every((o) =>
+    o.values.includes(selectedOptions[o.name] ?? ""),
+  );
   return (
     <section className="sf-section">
       <div className="sf-breadcrumb">
@@ -914,7 +962,7 @@ function ProductPage() {
         {p.name}
       </div>
       <div className="sf-product-detail">
-        <ProductImage key={p.id} product={p} large />
+        <ImageGallery key={p.id} images={p.images} name={p.name} />
         <div>
           <span className="sf-kicker">{p.brand || p.category.name}</span>
           <h1>{p.name}</h1>
@@ -932,6 +980,30 @@ function ProductPage() {
               : "Currently out of stock"}
           </span>
           <p className="sf-description">{p.description}</p>
+          <div className="sf-product-options">
+            {(p.options ?? []).map((option) => (
+              <label key={option.name}>
+                {option.name}
+                <select
+                  aria-label={`Choose ${option.name}`}
+                  value={selectedOptions[option.name] ?? ""}
+                  onChange={(e) =>
+                    setSelectedOptions((old) => ({
+                      ...old,
+                      [option.name]: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Choose {option.name.toLowerCase()}</option>
+                  {option.values.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
           <div className="sf-buy-row">
             <div className="sf-quantity">
               <button
@@ -952,8 +1024,8 @@ function ProductPage() {
             </div>
             <button
               className="sf-button"
-              disabled={p.stock < 1}
-              onClick={() => add(p, qty)}
+              disabled={p.stock < 1 || !optionsComplete}
+              onClick={() => add(p, qty, selectedOptions)}
             >
               <ShoppingBag size={18} />
               Add to bag
@@ -967,9 +1039,9 @@ function ProductPage() {
           </div>
           <button
             className="sf-button sf-buy-now"
-            disabled={p.stock < 1}
+            disabled={p.stock < 1 || !optionsComplete}
             onClick={() => {
-              add(p, qty);
+              add(p, qty, selectedOptions);
               navigate("/cart");
             }}
           >
@@ -1074,10 +1146,23 @@ function Cart() {
           {cart.map((i) => {
             const current = fresh.data?.find((p) => p?.id === i.product.id);
             const unavailable =
-              !!fresh.data && (!current || current.stock < i.quantity);
+              !!fresh.data &&
+              (!current ||
+                current.stock <
+                  cart
+                    .filter((line) => line.product.id === i.product.id)
+                    .reduce((sum, line) => sum + line.quantity, 0) ||
+                (current.options ?? []).some(
+                  (option) =>
+                    !option.values.includes(
+                      i.selectedOptions?.[option.name] ?? "",
+                    ),
+                ) ||
+                Object.keys(i.selectedOptions ?? {}).length !==
+                  (current.options ?? []).length);
             const p = current ?? i.product;
             return (
-              <div className="sf-cart-line" key={p.id}>
+              <div className="sf-cart-line" key={lineKey(i)}>
                 <Link to={`/product/${p.id}`}>
                   <ProductImage product={p} />
                 </Link>
@@ -1086,9 +1171,15 @@ function Cart() {
                     <h3>{p.name}</h3>
                   </Link>
                   <small>{bdt(price(p))} each</small>
+                  {optionSummary(i.selectedOptions) && (
+                    <small className="sf-selected-options">
+                      {optionSummary(i.selectedOptions)}
+                    </small>
+                  )}
                   {unavailable && (
                     <p className="sf-error">
-                      Unavailable in this quantity. Update or remove it.
+                      Stock or options changed. Open the product to update your
+                      selection, or remove this item.
                     </p>
                   )}
                   <div className="sf-quantity">
@@ -1098,7 +1189,7 @@ function Cart() {
                       onClick={() =>
                         setCart((old) =>
                           old.map((line) =>
-                            line.product.id === p.id
+                            lineKey(line) === lineKey(i)
                               ? { ...line, quantity: line.quantity - 1 }
                               : line,
                           ),
@@ -1110,11 +1201,16 @@ function Cart() {
                     <span>{i.quantity}</span>
                     <button
                       aria-label={`Increase ${p.name}`}
-                      disabled={i.quantity >= Math.min(50, p.stock)}
+                      disabled={
+                        cart
+                          .filter((line) => line.product.id === p.id)
+                          .reduce((sum, line) => sum + line.quantity, 0) >=
+                        Math.min(50, p.stock)
+                      }
                       onClick={() =>
                         setCart((old) =>
                           old.map((line) =>
-                            line.product.id === p.id
+                            lineKey(line) === lineKey(i)
                               ? { ...line, quantity: line.quantity + 1 }
                               : line,
                           ),
@@ -1134,7 +1230,7 @@ function Cart() {
                     aria-label={`Remove ${p.name}`}
                     onClick={() =>
                       setCart((old) =>
-                        old.filter((line) => line.product.id !== p.id),
+                        old.filter((line) => lineKey(line) !== lineKey(i)),
                       )
                     }
                   >
@@ -1201,7 +1297,11 @@ function Checkout() {
   });
   const body = {
     zone,
-    items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
+    items: cart.map((i) => ({
+      productId: i.product.id,
+      quantity: i.quantity,
+      selectedOptions: i.selectedOptions ?? {},
+    })),
   };
   const q = useQuery({
     queryKey: ["shop-quote", JSON.stringify(body)],
@@ -1467,6 +1567,11 @@ function Checkout() {
                   <div key={n}>
                     <span>
                       {i.name} × {i.quantity}
+                      {optionSummary(i.selectedOptions) && (
+                        <small className="sf-selected-options">
+                          {optionSummary(i.selectedOptions)}
+                        </small>
+                      )}
                     </span>
                     <strong>{bdt(i.lineTotal)}</strong>
                   </div>
@@ -1515,6 +1620,11 @@ function OrderReceipt({ order }: { order: Receipt }) {
         <div key={n}>
           <span>
             {i.name} × {i.quantity}
+            {optionSummary(i.selectedOptions) && (
+              <small className="sf-selected-options">
+                {optionSummary(i.selectedOptions)}
+              </small>
+            )}
           </span>
           <strong>{bdt(i.lineTotal)}</strong>
         </div>
